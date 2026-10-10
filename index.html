@@ -210,7 +210,7 @@ async function load() {
   try {
     const [st, rep, sigs, trades, pl] = await Promise.all([
       get('/state'), get('/report'), get('/signals?limit=50'),
-      get('/trades').catch(() => []), get('/pumplists').catch(() => ({}))
+      get('/trades').catch(() => []), get('/reallists').catch(() => ({}))
     ]);
     mirrorData = pl || {}; renderMirror();
     $('updated').textContent = 'UPDATED ' + clock(Date.now());
