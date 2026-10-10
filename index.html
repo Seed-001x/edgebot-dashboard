@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edgebot Live</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0B0E13;color:#e6e6e6;font-family:-apple-system,system-ui,sans-serif;padding:16px;max-width:900px;margin:0 auto}
+h1{font-size:20px;margin-bottom:4px}
+.sub{color:#888;font-size:12px;margin-bottom:16px}
+.card{background:#14181f;border:1px solid #222a35;border-radius:10px;padding:14px;margin-bottom:12px}
+.card h2{font-size:14px;color:#8B7CF6;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1c222c;font-size:14px}
+.row:last-child{border:none}
+.label{color:#888}
+.val{font-weight:600}
+.green{color:#2DD4BF}.red{color:#f87171}.yellow{color:#fbbf24}
+.pos{background:#16202a;border-left:3px solid #2DD4BF;padding:10px;margin:8px 0;border-radius:6px}
+.pos .sym{font-weight:700;font-size:16px}
+.pos .meta{font-size:12px;color:#888;margin-top:4px}
+.sig{padding:10px;border-bottom:1px solid #1c222c;font-size:13px}
+.sig .top{display:flex;justify-content:space-between;align-items:center}
+.sig .sym{font-weight:700}
+.sig a{color:#2DD4BF;text-decoration:none}
+.sig .reason{color:#888;font-size:12px;margin-top:4px}
+.btns{margin-top:8px;display:flex;gap:8px}
+.btns button{flex:1;padding:10px;border:none;border-radius:8px;font-size:16px;cursor:pointer}
+.btn-good{background:#1a3a2a;color:#2DD4BF}
+.btn-bad{background:#3a1a1a;color:#f87171}
+.btns button:disabled{opacity:.4;cursor:default}
+.refresh{position:fixed;bottom:16px;right:16px;background:#2DD4BF;color:#000;border:none;border-radius:50%;width:56px;height:56px;font-size:24px;cursor:pointer}
+.status{font-size:12px;color:#888;text-align:center;margin:12px 0}
+</style>
+</head>
+<body>
+<h1>⚡ Edgebot Live</h1>
+<div class="sub" id="updated">connecting…</div>
+
+<div class="card">
+<h2>Engine</h2>
+<div id="engine"><div class="row"><span class="label">Loading…</span></div></div>
+</div>
+
+<div class="card">
+<h2>Positions <span id="posCount"></span></h2>
+<div id="positions"><div class="row"><span class="label">Loading…</span></div></div>
+</div>
+
+<div class="card">
+<h2>Recent Signals</h2>
+<div id="signals"><div class="row"><span class="label">Loading…</span></div></div>
+</div>
+
+<div class="card">
+<h2>Performance</h2>
+<div id="report"><div class="row"><span class="label">Loading…</span></div></div>
+</div>
+
+<button class="refresh" onclick="load()">↻</button>
+
+<script>
+const API='https://edgebot.onrender.com';
+async function get(p){const r=await fetch(API+p);return r.json();}
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+async function feedback(mint,symbol,good,signalId,btn){
+  btn.disabled=true;
+  try{
+    await fetch(API+'/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mint,symbol,good,signalId})});
+    btn.parentElement.innerHTML='<span style="color:#2DD4BF;font-size:13px">✓ saved</span>';
+  }catch(e){btn.disabled=false;alert('failed');}
+}
+async function load(){
+  try{
+    const [st,rep,sigs]=await Promise.all([get('/state'),get('/report'),get('/signals?limit=20')]);
+    document.getElementById('updated').textContent='updated '+new Date().toLocaleTimeString();
+    // Engine
+    const r=st.risk||{};
+    document.getElementById('engine').innerHTML=
+      row('Mode',st.mode==='REAL'?'<span class="red">● REAL</span>':'<span class="green">● SHADOW</span>')+
+      row('Halted',st.halted?'<span class="red">YES</span>':'<span class="green">No</span>')+
+      row('Day P&L',((r.dayPnlSol||0)>=0?'<span class="green">':'<span class="red">')+(r.dayPnlSol||0).toFixed(4)+' SOL</span>')+
+      row('Trades/hr',(r.tradesLastHour||0)+' / '+(st.limits?.maxTradesPerHour||6))+
+      row('Watchlist',st.watchlist||0+' coins');
+    // Positions
+    const pos=st.positions||[];
+    document.getElementById('posCount').textContent='('+pos.length+')';
+    document.getElementById('positions').innerHTML=pos.length?pos.map(p=>
+      '<div class="pos"><div class="sym"><a href="https://pump.fun/coin/'+esc(p.mint)+'" target="_blank" style="color:#e6e6e6">'+esc(p.symbol)+'</a></div>'+
+      '<div class="meta">'+esc(p.setup)+' · '+esc(p.entrySol)+' SOL · held '+Math.round(p.heldMin||0)+'m · <a href="https://pump.fun/coin/'+esc(p.mint)+'" target="_blank">chart ↗</a></div></div>'
+    ).join(''):'<div class="row"><span class="label">No open positions</span></div>';
+    // Signals
+    const s=sigs||[];
+    document.getElementById('signals').innerHTML=s.length?s.map(x=>{
+      const skipped=x.decision==='skipped';
+      return '<div class="sig"><div class="top"><span class="sym"><a href="https://pump.fun/coin/'+esc(x.mint)+'" target="_blank">'+esc(x.symbol)+'</a></span>'+
+      '<span class="'+(skipped?'yellow':'green')+'">'+esc(x.decision)+'</span></div>'+
+      '<div class="reason">'+esc(x.setup)+' · MC $'+Math.round(x.mc||0).toLocaleString()+(x.reasons&&x.reasons.length?' · '+esc(x.reasons[0]):"")+'</div>'+
+      (skipped?'<div class="btns"><button class="btn-good" onclick="feedback(\''+esc(x.mint)+'\',\''+esc(x.symbol)+'\',true,\''+esc(x.id)+'\',this)">✓ good</button><button class="btn-bad" onclick="feedback(\''+esc(x.mint)+'\',\''+esc(x.symbol)+'\',false,\''+esc(x.id)+'\',this)">✗ skip ok</button></div>':'')+
+      '</div>';
+    }).join(''):'<div class="row"><span class="label">No signals yet</span></div>';
+    // Report
+    const t=rep.trades||{};
+    const fb=rep.feedback||{};
+    document.getElementById('report').innerHTML=
+      row('Closed trades',t.closed||0)+
+      row('Win rate',t.closed?Math.round((t.wins||0)/t.closed*100)+'%':'—')+
+      row('Total P&L',((t.totalPnlSol||0)>=0?'<span class="green">+':'<span class="red">')+(t.totalPnlSol||0).toFixed(4)+' SOL</span>')+
+      row('Feedback given',fb.total||0)+
+      (fb.contested&&Object.keys(fb.contested).length?row('⚠ Contested gates',Object.keys(fb.contested).join(', ')):'');
+  }catch(e){
+    document.getElementById('updated').textContent='error: '+e.message;
+  }
+}
+function row(l,v){return '<div class="row"><span class="label">'+l+'</span><span class="val">'+v+'</span></div>';}
+load();setInterval(load,10000);
+</script>
+</body>
+</html>
