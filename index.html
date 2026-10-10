@@ -61,7 +61,7 @@ h1{font-size:20px;margin-bottom:4px}
 
 <script>
 const API='https://edgebot.onrender.com';
-async function get(p){const r=await fetch(API+p);return r.json();}
+async function get(p){const r=await fetch(API+p+'?t='+Date.now(),{cache:'no-store'});return r.json();}
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 async function feedback(mint,symbol,good,signalId,btn){
   btn.disabled=true;
