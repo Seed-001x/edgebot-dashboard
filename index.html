@@ -178,6 +178,15 @@ async function feedback(mint, symbol, good, signalId, btn, kind) {
 }
 function fbHandler(el) { const d = el.dataset; feedback(d.mint, d.symbol, d.good === '1', d.sid, el, d.kind); }
 
+async function mirrorFeedback(mint, symbol, good, btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch(API + '/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mint, symbol, good, kind: 'mirror' }) });
+    if (!r.ok) throw new Error('http ' + r.status);
+    btn.style.opacity = '1'; btn.style.background = good ? '#14241b' : '#241414';
+  } catch { btn.disabled = false; alert("Couldn't save — try again"); }
+}
+
 function showMirror(tab) { mirrorTab = tab; renderMirror(); }
 function showMainTab(tab){
   ['overview','mirror','signals'].forEach(t=>{
@@ -200,6 +209,10 @@ function renderMirror() {
     `<div class="coin"><div class="i">${String(i + 1).padStart(2, '0')}</div>
        <div><div class="n">${esc(c.symbol)}</div><div class="d">${esc(c.name || '')}</div></div>
        <div class="m">${money(c.usdMc)}</div>
+       <div class="fb"><div>
+         <button class="ok" onclick="mirrorFeedback('${esc(c.address)}','${esc(c.symbol)}',true,this)">✓</button>
+         <button class="x" onclick="mirrorFeedback('${esc(c.address)}','${esc(c.symbol)}',false,this)">✗</button>
+       </div></div>
        <a class="btn" href="${chartUrl(c.address)}" target="_blank" rel="noopener">Open ↗</a></div>`).join('')
     : `<div class="empty">${(mirrorData[mirrorTab] && mirrorData[mirrorTab].err) ? 'LIST UNAVAILABLE: ' + esc(mirrorData[mirrorTab].err) : 'WAITING FOR DATA…'}</div>`;
   const ts = (mirrorData[mirrorTab] || {}).ts;
