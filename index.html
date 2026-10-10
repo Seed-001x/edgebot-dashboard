@@ -66,6 +66,17 @@ h1{font-size:20px;margin-bottom:4px}
 <div id="sources"><div class="row"><span class="label">Loading…</span></div></div>
 </div>
 
+<div class="card">
+<h2>🪞 Pump.fun Mirror</h2>
+<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+<button onclick="showMirror('trending')" id="tab-trending" style="flex:1;padding:8px;background:#2DD4BF;color:#000;border:none;border-radius:6px;font-weight:600;cursor:pointer">Trending</button>
+<button onclick="showMirror('movers')" id="tab-movers" style="flex:1;padding:8px;background:#222a35;color:#888;border:none;border-radius:6px;cursor:pointer">Movers</button>
+<button onclick="showMirror('new')" id="tab-new" style="flex:1;padding:8px;background:#222a35;color:#888;border:none;border-radius:6px;cursor:pointer">New</button>
+<button onclick="showMirror('graduated')" id="tab-graduated" style="flex:1;padding:8px;background:#222a35;color:#888;border:none;border-radius:6px;cursor:pointer">Graduated</button>
+</div>
+<div id="mirror" style="max-height:400px;overflow-y:auto"><div class="row"><span class="label">Loading…</span></div></div>
+</div>
+
 <button class="refresh" onclick="load()">↻</button>
 
 <script>
@@ -97,7 +108,9 @@ async function feedback(mint,symbol,good,signalId,btn,kind){
 }
 async function load(){
   try{
-    const [st,rep,sigs]=await Promise.all([get('/state'),get('/report'),get('/signals?limit=50')]);
+    const [st,rep,sigs,pl]=await Promise.all([get('/state'),get('/report'),get('/signals?limit=50'),get('/pumplists').catch(()=>({}))]);
+    mirrorData = pl || {};
+    renderMirror();
     document.getElementById('updated').textContent='updated '+new Date().toLocaleTimeString();
     // Engine
     const r=st.risk||{};
@@ -148,6 +161,27 @@ async function load(){
   }
 }
 function row(l,v){return '<div class="row"><span class="label">'+l+'</span><span class="val">'+v+'</span></div>';}
+let mirrorData = {};
+let mirrorTab = 'trending';
+function showMirror(tab){
+  mirrorTab = tab;
+  ['trending','movers','new','graduated'].forEach(t=>{
+    const el = document.getElementById('tab-'+t);
+    if(el){
+      el.style.background = t===tab ? '#2DD4BF' : '#222a35';
+      el.style.color = t===tab ? '#000' : '#888';
+    }
+  });
+  renderMirror();
+}
+function renderMirror(){
+  const rows = (mirrorData[mirrorTab] && mirrorData[mirrorTab].rows) || [];
+  document.getElementById('mirror').innerHTML = rows.length ? rows.map((c,i)=>
+    '<div class="sig"><div class="top"><span class="sym"><a href="https://pump.fun/coin/'+esc(c.address)+'" target="_blank">'+esc(c.symbol)+'</a></span>'+
+    '<span class="label">#'+(i+1)+'</span></div>'+
+    '<div class="reason">'+esc(c.name||'')+(c.usdMc?' · MC $'+Math.round(c.usdMc).toLocaleString():'')+'</div></div>'
+  ).join('') : '<div class="row"><span class="label">No coins yet — waiting for bot to fetch</span></div>';
+}
 load();setInterval(load,10000);
 </script>
 </body>
