@@ -259,7 +259,8 @@ async function load() {
        ${row('Entry', sol(p.entrySol) + ' SOL')}${row('Remaining', Math.round((p.remainingFrac ?? 1) * 100) + '%')}${row('Peak', (p.peakRatio ?? 1).toFixed(2) + '×')}
        <div class="addr">${esc(p.mint)}</div>
        <button class="btn" onclick="navigator.clipboard.writeText('${esc(p.mint)}');this.textContent='COPIED ✓';setTimeout(()=>this.textContent='COPY CA',1200)">COPY CA</button>
-       <button class="btn ghost" data-mint="${esc(p.mint)}" data-symbol="${esc(p.symbol)}" data-good="0" data-sid="${esc(p.id || '')}" data-kind="position" onclick="fbHandler(this)">👎 Don't ape these</button></div>`
+       <button class="btn ghost" data-mint="${esc(p.mint)}" data-symbol="${esc(p.symbol)}" data-good="0" data-sid="${esc(p.id || '')}" data-kind="position" onclick="fbHandler(this)">👎 Don't ape these</button>
+       <button class="btn ghost" onclick="if(confirm('Remove ${esc(p.symbol)} from tracking?'))fetch(API+'/positions/${esc(p.id||p.mint)}',{method:'DELETE'}).then(()=>load())" style="color:var(--red)">✕ Remove</button></div>`
     ).join('') : '<div class="empty">NO OPEN POSITIONS</div>';
 
     const closed = (trades || []).filter(t => t.type === 'close');
