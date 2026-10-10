@@ -79,11 +79,25 @@ td:first-child{text-transform:uppercase;font-size:13px}
 .empty{padding:22px 0;font:12px var(--mono);color:var(--faint);letter-spacing:.06em}
 .err{color:var(--red)}
 .refresh{position:fixed;right:18px;bottom:22px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#06130b;border:0;font-size:22px;cursor:pointer;box-shadow:0 4px 18px #0008}
+/* main tabs */
+.maintabs{position:sticky;top:0;z-index:50;display:flex;gap:8px;background:var(--bg);padding:12px 0;border-bottom:1px solid var(--rule);margin-bottom:8px}
+.maintabs button{flex:1;padding:12px;background:var(--panel);color:var(--dim);border:1px solid var(--rule);border-radius:10px;cursor:pointer;font:600 13px var(--sans);letter-spacing:.06em}
+.maintabs button.on{background:var(--greenbg);color:var(--green);border-color:#1f4a31}
+.tabpage{display:none}
+.tabpage.on{display:block}
 </style>
 </head>
 <body>
 
 <div class="top"><span id="updated">connecting…</span><span class="badge" id="mode">—</span></div>
+
+<div class="maintabs">
+<button id="mtab-overview" class="on" onclick="showMainTab('overview')">OVERVIEW</button>
+<button id="mtab-mirror" onclick="showMainTab('mirror')">🪞 MIRROR</button>
+<button id="mtab-signals" onclick="showMainTab('signals')">⚡ SIGNALS</button>
+</div>
+
+<div class="tabpage on" id="page-overview">
 
 <section class="sec"><div class="eyebrow"><span>Live trading</span><span class="r" id="haltNote"></span></div>
   <h2>Engine</h2><div id="engine"></div></section>
@@ -104,15 +118,26 @@ td:first-child{text-transform:uppercase;font-size:13px}
   <h2>Discovery Sources</h2>
   <table><thead><tr><th>SOURCE</th><th>RETURNED</th><th>TAKEN</th></tr></thead><tbody id="sources"></tbody></table></section>
 
+</div><!-- /page-overview -->
+<div class="tabpage" id="page-mirror">
+
 <section class="sec"><div class="eyebrow"><span>Bot input / pump.fun</span><span class="r" id="shown"></span></div>
   <h2>Pump.fun Mirror</h2>
   <div class="tabs" id="tabs"></div><div id="mirror"></div><div class="foot" id="mirrorFoot"></div></section>
 
+</div><!-- /page-mirror -->
+<div class="tabpage" id="page-signals">
+
 <section class="sec"><div class="eyebrow"><span>Latest detections</span><span class="r" id="sigCount"></span></div>
   <h2>Signals</h2><div id="signals"></div></section>
 
+</div><!-- /page-signals -->
+<div class="tabpage on" id="page-overview-tail">
+
 <section class="sec"><div class="eyebrow"><span>Feedback &amp; filters</span><span class="r" id="perfNote"></span></div>
   <h2>Performance</h2><div id="perf"></div></section>
+
+</div><!-- /page-overview-tail -->
 
 <button class="refresh" onclick="load()" aria-label="Refresh">↻</button>
 
@@ -154,6 +179,16 @@ async function feedback(mint, symbol, good, signalId, btn, kind) {
 function fbHandler(el) { const d = el.dataset; feedback(d.mint, d.symbol, d.good === '1', d.sid, el, d.kind); }
 
 function showMirror(tab) { mirrorTab = tab; renderMirror(); }
+function showMainTab(tab){
+  ['overview','mirror','signals'].forEach(t=>{
+    document.getElementById('mtab-'+t).classList.toggle('on', t===tab);
+  });
+  document.getElementById('page-overview').style.display = tab==='overview' ? 'block' : 'none';
+  document.getElementById('page-overview-tail').style.display = tab==='overview' ? 'block' : 'none';
+  document.getElementById('page-mirror').style.display = tab==='mirror' ? 'block' : 'none';
+  document.getElementById('page-signals').style.display = tab==='signals' ? 'block' : 'none';
+  window.scrollTo(0,0);
+}
 function renderMirror() {
   $('tabs').innerHTML = MIRROR_TABS.map(t => {
     const n = ((mirrorData[t] || {}).rows || []).length;
