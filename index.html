@@ -76,6 +76,9 @@ td:first-child{text-transform:uppercase;font-size:13px}
 .coin .n{font:700 16px var(--mono)} .coin .d{font-size:13px;color:var(--faint);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46vw}
 .coin .m{font:700 14px var(--mono);text-align:right}
 .coin .btn{grid-column:2 / 4;margin:12px 0 16px;padding:11px}
+.mfb{grid-column:2 / 4;display:flex;gap:8px;margin-top:10px}
+.mfb button{flex:1;height:40px;background:var(--raise);border:1px solid var(--rule);font:700 16px var(--mono);cursor:pointer}
+.mfb .x{color:var(--amber)} .mfb .ok{color:var(--green)}
 .empty{padding:22px 0;font:12px var(--mono);color:var(--faint);letter-spacing:.06em}
 .err{color:var(--red)}
 .refresh{position:fixed;right:18px;bottom:22px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#06130b;border:0;font-size:22px;cursor:pointer;box-shadow:0 4px 18px #0008}
@@ -145,7 +148,7 @@ td:first-child{text-transform:uppercase;font-size:13px}
 // ---- config: change only this line if the bot's URL changes ----
 const API = 'https://edgebot.onrender.com';
 const REFRESH_MS = 10000;
-const MIRROR_TABS = ['trending','movers','new','graduated'];
+const MIRROR_TABS = ['trending','movers'];
 
 let reacted = {};
 try { reacted = JSON.parse(localStorage.getItem('edgebot_reacted') || '{}'); } catch {}
@@ -208,11 +211,11 @@ function renderMirror() {
   $('mirror').innerHTML = rows.length ? rows.map((c, i) =>
     `<div class="coin"><div class="i">${String(i + 1).padStart(2, '0')}</div>
        <div><div class="n">${esc(c.symbol)}</div><div class="d">${esc(c.name || '')}</div></div>
-       <div class="m">${money(c.usdMc)}</div>
-       <div class="fb"><div>
+       <div class="m">${c.usdMc ? money(c.usdMc) : ''}</div>
+       <div class="mfb">
          <button class="ok" onclick="mirrorFeedback('${esc(c.address)}','${esc(c.symbol)}',true,this)">✓</button>
          <button class="x" onclick="mirrorFeedback('${esc(c.address)}','${esc(c.symbol)}',false,this)">✗</button>
-       </div></div>
+       </div>
        <a class="btn" href="${chartUrl(c.address)}" target="_blank" rel="noopener">Open ↗</a></div>`).join('')
     : `<div class="empty">${(mirrorData[mirrorTab] && mirrorData[mirrorTab].err) ? 'LIST UNAVAILABLE: ' + esc(mirrorData[mirrorTab].err) : 'WAITING FOR DATA…'}</div>`;
   const ts = (mirrorData[mirrorTab] || {}).ts;
