@@ -31,6 +31,7 @@ h1{font-size:20px;margin-bottom:4px}
 .btns button:disabled{opacity:.4;cursor:default}
 .refresh{position:fixed;bottom:16px;right:16px;background:#2DD4BF;color:#000;border:none;border-radius:50%;width:56px;height:56px;font-size:24px;cursor:pointer}
 .status{font-size:12px;color:#888;text-align:center;margin:12px 0}
+#signals{max-height:600px;overflow-y:auto}
 </style>
 </head>
 <body>
@@ -57,6 +58,11 @@ h1{font-size:20px;margin-bottom:4px}
 <div id="report"><div class="row"><span class="label">Loading…</span></div></div>
 </div>
 
+<div class="card">
+<h2>Discovery Sources</h2>
+<div id="sources"><div class="row"><span class="label">Loading…</span></div></div>
+</div>
+
 <button class="refresh" onclick="load()">↻</button>
 
 <script>
@@ -72,7 +78,7 @@ async function feedback(mint,symbol,good,signalId,btn){
 }
 async function load(){
   try{
-    const [st,rep,sigs]=await Promise.all([get('/state'),get('/report'),get('/signals?limit=20')]);
+    const [st,rep,sigs]=await Promise.all([get('/state'),get('/report'),get('/signals?limit=50')]);
     document.getElementById('updated').textContent='updated '+new Date().toLocaleTimeString();
     // Engine
     const r=st.risk||{};
@@ -87,7 +93,8 @@ async function load(){
     document.getElementById('posCount').textContent='('+pos.length+')';
     document.getElementById('positions').innerHTML=pos.length?pos.map(p=>
       '<div class="pos"><div class="sym"><a href="https://pump.fun/coin/'+esc(p.mint)+'" target="_blank" style="color:#e6e6e6">'+esc(p.symbol)+'</a></div>'+
-      '<div class="meta">'+esc(p.setup)+' · '+esc(p.entrySol)+' SOL · held '+Math.round(p.heldMin||0)+'m · <a href="https://pump.fun/coin/'+esc(p.mint)+'" target="_blank">chart ↗</a></div></div>'
+      '<div class="meta">'+esc(p.setup)+' · '+esc(p.entrySol)+' SOL · held '+Math.round(p.heldMin||0)+'m · <a href="https://pump.fun/coin/'+esc(p.mint)+'" target="_blank">chart ↗</a></div>'+
+      '<div class="btns"><button class="btn-bad" onclick="feedback(\''+esc(p.mint)+'\',\''+esc(p.symbol)+'\',false,\''+esc(p.id)+'\',this)">👎 DON\'T APE THESE</button></div></div>'
     ).join(''):'<div class="row"><span class="label">No open positions</span></div>';
     // Signals
     const s=sigs||[];
@@ -108,6 +115,12 @@ async function load(){
       row('Total P&L',((t.totalPnlSol||0)>=0?'<span class="green">+':'<span class="red">')+(t.totalPnlSol||0).toFixed(4)+' SOL</span>')+
       row('Feedback given',fb.total||0)+
       (fb.contested&&Object.keys(fb.contested).length?row('⚠ Contested gates',Object.keys(fb.contested).join(', ')):'');
+    // Sources
+    const sc=st.stats?.sourceCounts||{};
+    const srcHtml=Object.entries(sc).sort().map(([k,v])=>
+      row(esc(k), esc(v.taken||0)+' / '+esc(v.returned||0))
+    ).join('');
+    document.getElementById('sources').innerHTML=srcHtml||'<div class="row"><span class="label">No source data</span></div>';
   }catch(e){
     document.getElementById('updated').textContent='error: '+e.message;
   }
