@@ -447,18 +447,38 @@ async function feedback(btn) {
     const el = btn.closest('.card'); if (el) { el.style.opacity = '0'; el.style.transition = 'opacity .25s'; setTimeout(() => el.remove(), 260); }
   } catch (e) { btn.disabled = false; flash('Feedback did not save: ' + e.message + '. Try again in a moment.'); }
 }
-async function tagExit(id, reason, btn) {
+async function tagExit(id, reason, btn, note) {
   btn.disabled = true;
   try {
-    const r = await fetch(API + '/exittag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, reason }) });
+    const r = await fetch(API + '/exittag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, reason, note }) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    const m = (DATA.learn.recent || []).find(x => x.id === id); if (m) m.reason = reason;
+    const m = (DATA.learn.recent || []).find(x => x.id === id); if (m) { m.reason = reason; if (note) m.note = note; }
     renderTrades(); renderLearn();
   } catch (e) { btn.disabled = false; flash('Tag did not save: ' + e.message); }
 }
+function otherNoteHTML(id) {
+  return `<div class="other-note" data-other="${esc(id)}" style="margin-top:8px;display:flex;gap:8px"><input type="text" placeholder="Explain why you closed it..." maxlength="300" style="flex:1;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:14px" /><button class="chip on" data-othersave="${esc(id)}" style="white-space:nowrap">Save</button></div>`;
+}
+document.addEventListener('click', e => {
+  const ob = e.target.closest('[data-othersave]');
+  if (ob) {
+    const wrap = ob.closest('.other-note'), inp = wrap && wrap.querySelector('input');
+    tagExit(ob.dataset.othersave, 'other', ob, inp ? inp.value.trim() : '');
+    return;
+  }
+  const tg = e.target.closest('[data-tag]');
+  if (tg) {
+    if (tg.dataset.tag === 'other') {
+      const card = tg.closest('.card.item'), ex = card && card.querySelector('.other-note');
+      if (ex) ex.remove(); else tg.insertAdjacentHTML('afterend', otherNoteHTML(tg.dataset.id));
+      const inp = card && card.querySelector('.other-note input'); if (inp) inp.focus();
+      return;
+    }
+    return tagExit(tg.dataset.id, tg.dataset.tag, tg);
+  }
+});
 document.addEventListener('click', e => {
   const f = e.target.closest('[data-fb]'); if (f) return feedback(f);
-  const t = e.target.closest('[data-tag]'); if (t) return tagExit(t.dataset.id, t.dataset.tag, t);
   const c = e.target.closest('[data-copy]'); if (c) { try { navigator.clipboard.writeText(c.dataset.copy); c.textContent = 'Copied'; setTimeout(() => c.textContent = 'Copy address', 1200); } catch {} }
 });
 let flashT; function flash(msg) { const b = $('banner'); b.innerHTML = esc(msg); b.classList.add('on'); clearTimeout(flashT); flashT = setTimeout(() => b.classList.remove('on'), 5000); }
@@ -576,7 +596,7 @@ function renderTrades() {
   const untagged = man.filter(m => !m.reason), tagged = man.filter(m => m.reason);
   $('manN').textContent = untagged.length ? `${untagged.length} to tag` : '';
   const card = m => `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px">${esc(m.symbol)}</span><span class="${(m.pnlSolEstimate || 0) >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(m.pnlSolEstimate)} SOL est.</span></div>
-      <div class="why">Held ${m.heldMin} min, peaked at ${(m.peakRatio || 1).toFixed(2)}x${m.bundleScore ? ', bundle risk ' + m.bundleScore : ''}. ${m.reason ? 'Your reason is saved.' : 'Why did you close it?'}</div>
+      <div class="why">Held ${m.heldMin} min, peaked at ${(m.peakRatio || 1).toFixed(2)}x${m.bundleScore ? ', bundle risk ' + m.bundleScore : ''}. ${m.reason ? 'Your reason is saved.' : 'Why did you close it?'}${m.note ? ` <i>"${esc(m.note)}"</i>` : ''}</div>
       <div class="chips">${REASONS.map(([k, l]) => `<button class="chip ${m.reason === k ? 'on' : ''}" data-tag="${k}" data-id="${esc(m.id)}">${l}</button>`).join('')}</div></div>`;
   $('manual').innerHTML = (untagged.length || tagged.length)
     ? untagged.map(card).join('') + (tagged.length ? `<details style="margin-top:10px"><summary style="cursor:pointer;color:var(--mut);font-size:13px">Tagged (${tagged.length})</summary><div style="margin-top:8px">${tagged.map(card).join('')}</div></details>` : '')
