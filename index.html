@@ -681,7 +681,7 @@ function renderLearn() {
 let failures = 0;
 async function load() {
   const need = ['state', 'report', 'signals', 'trades'];
-  const [state, report, signals, trades, lists, learn] = await Promise.allSettled([get('/state'), get('/report'), get('/signals?limit=60'), get('/trades'), get('/pumplists'), get('/learn')]);
+  const [state, report, signals, trades, lists, learn] = await Promise.allSettled([get('/state'), get('/report'), get('/signals?limit=60'), get('/trades'), get('/reallists'), get('/learn')]);
   const val = r => r.status === 'fulfilled' ? r.value : null;
   if (!val(state)) {
     failures++;
