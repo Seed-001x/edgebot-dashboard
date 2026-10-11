@@ -92,7 +92,7 @@ td:first-child{text-transform:uppercase;font-size:13px}
 </head>
 <body>
 
-<div class="top"><span id="updated">connecting…</span><span class="badge" id="mode">—</span></div>
+<div class="top"><span id="updated">connecting…</span><span id="topStats" style="margin:0 8px"></span><span class="badge" id="mode">—</span></div>
 
 <div class="maintabs">
 <button id="mtab-overview" class="on" onclick="showMainTab('overview')">OVERVIEW</button>
@@ -102,27 +102,14 @@ td:first-child{text-transform:uppercase;font-size:13px}
 
 <div class="tabpage on" id="page-overview">
 
-<section class="sec"><div class="eyebrow"><span>Live trading</span><span class="r" id="haltNote"></span></div>
-  <h2>Engine</h2><div id="engine"></div></section>
-
 <section class="sec"><div class="eyebrow"><span>Open risk</span><span class="r" id="posCount"></span></div>
   <h2>Positions</h2><div id="positions"></div></section>
-
-<section class="sec"><div class="eyebrow"><span>Recent outcomes</span><span class="r" id="closedCount"></span></div>
-  <h2>Trade history</h2><div id="trades"></div></section>
 
 <section class="sec"><div class="eyebrow"><span>Your manual exits — tag why you sold</span><span class="r" id="learnCount"></span></div>
   <h2>Learn</h2><div id="learn"></div></section>
 
-<section class="sec"><div class="eyebrow"><span>Guardrails</span><span class="r" id="day"></span></div>
-  <h2>Risk ledger</h2><div id="ledger"></div></section>
-
-<section class="sec"><div class="eyebrow"><span>Loop counters</span><span class="r" id="errCount"></span></div>
-  <h2>Machine</h2><div class="grid" id="machine"></div><div class="foot" id="heartbeat"></div></section>
-
-<section class="sec"><div class="eyebrow"><span>Discovery intake</span><span class="r" id="srcCount"></span></div>
-  <h2>Discovery Sources</h2>
-  <table><thead><tr><th>SOURCE</th><th>RETURNED</th><th>TAKEN</th></tr></thead><tbody id="sources"></tbody></table></section>
+<section class="sec"><div class="eyebrow"><span>Recent outcomes</span><span class="r" id="closedCount"></span></div>
+  <h2>Trade history</h2><div id="trades"></div></section>
 
 </div><!-- /page-overview -->
 <div class="tabpage" id="page-mirror">
@@ -139,10 +126,6 @@ td:first-child{text-transform:uppercase;font-size:13px}
 
 </div><!-- /page-signals -->
 <div class="tabpage on" id="page-overview-tail">
-
-<section class="sec"><div class="eyebrow"><span>Feedback &amp; filters</span><span class="r" id="perfNote"></span></div>
-  <h2>Performance</h2><div id="perf"></div></section>
-
 </div><!-- /page-overview-tail -->
 
 <button class="refresh" onclick="load()" aria-label="Refresh">↻</button>
@@ -244,13 +227,15 @@ async function load() {
     const real = st.mode === 'REAL', r = st.risk || {}, lim = st.limits || {}, stt = st.stats || {};
     $('mode').textContent = real ? '● REAL' : 'SHADOW';
     $('mode').className = 'badge ' + (real ? 'real' : 'shadow');
-    $('haltNote').innerHTML = st.halted ? '<span class="r">HALTED</span>' : '';
 
-    $('engine').innerHTML =
-      row('Halted', st.halted ? '<span class="r">YES</span>' : '<span class="g">No</span>') +
-      row('Kill switch', r.killed ? '<span class="r">TRIPPED</span>' : '<span class="g">Armed</span>') +
-      row('Trades / hr', `${r.tradesLastHour || 0} / ${lim.maxTradesPerHour ?? '—'}`) +
-      row('Watchlist', `${st.watchlist || 0} coins`);
+    // Compact top stats: day P&L, win rate, halted status
+    const t = rep.trades || {};
+    const dayPnl = r.dayPnlSol || 0;
+    const winRate = t.closed ? Math.round((t.wins || 0) / t.closed * 100) + '%' : '—';
+    $('topStats').innerHTML =
+      `<span class="${dayPnl >= 0 ? 'g' : 'r'}" style="font-weight:700">${dayPnl >= 0 ? '+' : ''}${sol(dayPnl, 4)} SOL today</span>` +
+      `<span style="margin-left:10px" class="small">${winRate} win · ${t.closed || 0} closed</span>` +
+      (st.halted ? `<span class="r" style="margin-left:10px;font-weight:700">HALTED</span>` : '');
 
     const pos = (st.positions || []).filter(p => !reacted[p.id || p.mint]);
     $('posCount').textContent = pos.length + ' ACTIVE';
@@ -275,26 +260,6 @@ async function load() {
        <div class="hr"></div><div class="small"><span>${esc(t.reason || '')}</span><span>${t.ts ? clock(t.ts) : ''}</span></div></div>`
     ).join('') : '<div class="empty">NO CLOSED TRADES YET</div>';
 
-    $('day').textContent = r.day || '';
-    $('ledger').innerHTML =
-      row('Day P&amp;L', `<span class="${(r.dayPnlSol || 0) >= 0 ? 'g' : 'r'}">${sol(r.dayPnlSol, 4)} SOL</span>`) +
-      row('Loss ceiling', sol(r.dailyLossSol ?? lim.dailyLossSol) + ' SOL') +
-      row('Starting equity', sol(r.startEquitySol) + ' SOL') +
-      row('Per trade', sol(lim.tradeSol, 3) + ' SOL') +
-      row('Max positions', lim.maxPositions ?? '—');
-
-    $('errCount').textContent = (stt.errors || 0) + ' ERRORS';
-    const cell = (l, n) => `<div><div class="l">${l}</div><div class="n">${n ?? 0}</div></div>`;
-    $('machine').innerHTML = cell('Discover', stt.discoverTicks) + cell('Poll', stt.pollTicks) + cell('Position', stt.positionTicks) +
-      cell('Signals', stt.signals) + cell('Entries', stt.entries) + cell('Exits', stt.exits);
-    $('heartbeat').textContent = stt.lastDiscoverTs ? `Discovery heartbeat ${Math.round((Date.now() - stt.lastDiscoverTs) / 1000)}s ago · ${clock(stt.lastDiscoverTs)}` : '';
-    if (stt.lastError) $('heartbeat').innerHTML += `<br><span class="err">last error: ${esc(typeof stt.lastError === 'string' ? stt.lastError : JSON.stringify(stt.lastError)).slice(0, 160)}</span>`;
-
-    const sc = Object.entries(stt.sourceCounts || {});
-    $('srcCount').textContent = sc.length + ' SOURCES';
-    $('sources').innerHTML = sc.length ? sc.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v.returned ?? 0)}</td><td class="g">${esc(v.taken ?? 0)}</td></tr>`).join('')
-      : '<tr><td colspan="3" class="empty">NO DATA</td></tr>';
-
     const s = (sigs || []).filter(x => !reacted[x.id || x.mint]).slice(0, 10);
     $('sigCount').textContent = s.length + ' RECENT';
     $('signals').innerHTML = s.length ? s.map(x => {
@@ -308,15 +273,6 @@ async function load() {
           <button class="x" data-mint="${esc(x.mint)}" data-symbol="${esc(x.symbol)}" data-good="1" data-sid="${esc(x.id || '')}" data-kind="signal" onclick="fbHandler(this)">✗</button>
           <button class="ok" data-mint="${esc(x.mint)}" data-symbol="${esc(x.symbol)}" data-good="0" data-sid="${esc(x.id || '')}" data-kind="signal" onclick="fbHandler(this)">✓</button></div></div>` : ''}</div>`;
     }).join('') : '<div class="empty">NO SIGNALS YET</div>';
-
-    const t = rep.trades || {}, fb = rep.feedback || {};
-    $('perfNote').textContent = (rep.signals || 0) + ' SIGNALS LOGGED';
-    $('perf').innerHTML =
-      row('Closed trades', t.closed || 0) +
-      row('Win rate', t.closed ? Math.round((t.wins || 0) / t.closed * 100) + '%' : '—') +
-      row('Total P&amp;L', `<span class="${(t.totalPnlSol || 0) >= 0 ? 'g' : 'r'}">${(t.totalPnlSol || 0) >= 0 ? '+' : ''}${sol(t.totalPnlSol)} SOL</span>`) +
-      row('Feedback given', fb.total || 0) +
-      (fb.contested && Object.keys(fb.contested).length ? row('⚠ Contested', esc(Object.keys(fb.contested).join(', '))) : '');
 
     // Manual exits — tag why you sold
     try {
