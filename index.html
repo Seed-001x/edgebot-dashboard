@@ -111,6 +111,9 @@ td:first-child{text-transform:uppercase;font-size:13px}
 <section class="sec"><div class="eyebrow"><span>Recent outcomes</span><span class="r" id="closedCount"></span></div>
   <h2>Trade history</h2><div id="trades"></div></section>
 
+<section class="sec"><div class="eyebrow"><span>Your manual exits — tag why you sold</span><span class="r" id="learnCount"></span></div>
+  <h2>Learn</h2><div id="learn"></div></section>
+
 <section class="sec"><div class="eyebrow"><span>Guardrails</span><span class="r" id="day"></span></div>
   <h2>Risk ledger</h2><div id="ledger"></div></section>
 
@@ -314,7 +317,44 @@ async function load() {
       row('Total P&amp;L', `<span class="${(t.totalPnlSol || 0) >= 0 ? 'g' : 'r'}">${(t.totalPnlSol || 0) >= 0 ? '+' : ''}${sol(t.totalPnlSol)} SOL</span>`) +
       row('Feedback given', fb.total || 0) +
       (fb.contested && Object.keys(fb.contested).length ? row('⚠ Contested', esc(Object.keys(fb.contested).join(', '))) : '');
+
+    // Manual exits — tag why you sold
+    try {
+      const lr = await get('/learn');
+      $('learnCount').textContent = (lr.manualExits || 0) + ' EXITS · ' + (lr.tagged || 0) + ' TAGGED';
+      const reasons = ['dev_bundle', 'stalled', 'farm_wallets', 'chart_off', 'other'];
+      const reasonLabels = { dev_bundle: 'Dev bundle', stalled: 'Stalled', farm_wallets: 'Farm wallets', chart_off: 'Chart off', other: 'Other' };
+      let learnHtml = '';
+      if (lr.note) learnHtml += `<div class="reason">${esc(lr.note)}</div>`;
+      const exits = lr.exits || [];
+      if (!exits.length) {
+        learnHtml += '<div class="empty">NO MANUAL EXITS YET — sell something via pump.fun and it\'ll show up here</div>';
+      } else {
+        learnHtml += exits.map(m => {
+          const pnl = m.pnlSolEstimate != null ? `<span class="pnl ${m.pnlSolEstimate >= 0 ? 'g' : 'r'}">${m.pnlSolEstimate >= 0 ? '+' : ''}${sol(m.pnlSolEstimate)} SOL</span>` : '';
+          const tagButtons = m.reason
+            ? `<div class="reason">Tagged: <b>${esc(m.reason)}</b></div>`
+            : `<div class="fb"><span>Why did you sell?</span><div>` +
+              reasons.map(r => `<button class="btn ghost" data-id="${esc(m.id)}" data-reason="${r}" onclick="tagExit(this)" style="margin:2px">${reasonLabels[r]}</button>`).join('') +
+              `</div></div>`;
+          return `<div class="card"><div class="head"><span class="sym">${esc(m.symbol || '?')}</span>${pnl}</div>
+            <div class="sub">${Math.round(m.heldMin || 0)}m held · peak ${(m.peakRatio || 1).toFixed(2)}× · ${esc(m.how || '')}</div>
+            <div class="addr">${esc(m.mint || '')}</div>${tagButtons}</div>`;
+        }).join('');
+      }
+      $('learn').innerHTML = learnHtml;
+    } catch (e) { $('learn').innerHTML = '<div class="empty">LEARN UNAVAILABLE</div>'; }
   } catch (e) { $('updated').innerHTML = '<span class="err">ERROR: ' + esc(e.message) + '</span>'; }
+}
+
+async function tagExit(btn) {
+  const id = btn.dataset.id, reason = btn.dataset.reason;
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const r = await fetch(API + '/exittag', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, reason }) });
+    const j = await r.json();
+    if (j.ok) load(); else { btn.disabled = false; btn.textContent = reason; alert(j.error || 'failed'); }
+  } catch (e) { btn.disabled = false; btn.textContent = reason; alert('failed: ' + e.message); }
 }
 renderMirror(); load(); setInterval(load, REFRESH_MS);
 </script>
