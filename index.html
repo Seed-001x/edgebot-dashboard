@@ -573,10 +573,13 @@ function renderScene() {
 /* ---------- render: TRADES ---------- */
 function renderTrades() {
   const man = (DATA.learn && DATA.learn.recent) || [];
-  $('manN').textContent = man.length ? `${man.filter(m => !m.reason).length} to tag` : '';
-  $('manual').innerHTML = man.length ? man.map(m => `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px">${esc(m.symbol)}</span><span class="${(m.pnlSolEstimate || 0) >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(m.pnlSolEstimate)} SOL est.</span></div>
+  const untagged = man.filter(m => !m.reason), tagged = man.filter(m => m.reason);
+  $('manN').textContent = untagged.length ? `${untagged.length} to tag` : '';
+  const card = m => `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px">${esc(m.symbol)}</span><span class="${(m.pnlSolEstimate || 0) >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(m.pnlSolEstimate)} SOL est.</span></div>
       <div class="why">Held ${m.heldMin} min, peaked at ${(m.peakRatio || 1).toFixed(2)}x${m.bundleScore ? ', bundle risk ' + m.bundleScore : ''}. ${m.reason ? 'Your reason is saved.' : 'Why did you close it?'}</div>
-      <div class="chips">${REASONS.map(([k, l]) => `<button class="chip ${m.reason === k ? 'on' : ''}" data-tag="${k}" data-id="${esc(m.id)}">${l}</button>`).join('')}</div></div>`).join('')
+      <div class="chips">${REASONS.map(([k, l]) => `<button class="chip ${m.reason === k ? 'on' : ''}" data-tag="${k}" data-id="${esc(m.id)}">${l}</button>`).join('')}</div></div>`;
+  $('manual').innerHTML = (untagged.length || tagged.length)
+    ? untagged.map(card).join('') + (tagged.length ? `<details style="margin-top:10px"><summary style="cursor:pointer;color:var(--mut);font-size:13px">Tagged (${tagged.length})</summary><div style="margin-top:8px">${tagged.map(card).join('')}</div></details>` : '')
     : empty('Nothing closed by hand yet', 'When you sell a position in your own wallet, it lands here within about 30 seconds. Tag why, and the bot learns what you keep exiting.');
   const closed = (DATA.trades || []).filter(t => t.type === 'close' && !t.manual);
   $('closedN').textContent = closed.length ? closed.length + ' recent' : '';
