@@ -453,6 +453,7 @@ async function tagExit(id, reason, btn, note) {
     const r = await fetch(API + '/exittag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, reason, note }) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const m = (DATA.learn.recent || []).find(x => x.id === id); if (m) { m.reason = reason; if (note) m.note = note; }
+    const t = (DATA.trades || []).find(x => x.type === 'close' && (x.id === id || x.mint === id)); if (t) { t.userTag = reason; if (note) t.userNote = note; }
     renderTrades(); renderLearn();
   } catch (e) { btn.disabled = false; flash('Tag did not save: ' + e.message); }
 }
@@ -614,7 +615,8 @@ function renderTrades() {
   const closed = (DATA.trades || []).filter(t => t.type === 'close' && !t.manual);
   $('closedN').textContent = closed.length ? closed.length + ' recent' : '';
   $('trades').innerHTML = closed.length ? closed.slice(0, 20).map(t => `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px">${esc(t.symbol)}</span><span class="${t.pnlSol >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(t.pnlSol)} SOL</span></div>
-      <div class="why">${esc(t.reason || '')}</div><div class="mono">${esc(t.setup || '')}${t.heldMin != null ? ', ' + t.heldMin + ' min' : ''}${t.simulated ? ', simulated' : ''}${t.ts ? ', ' + ago(t.ts) : ''}</div></div>`).join('')
+      <div class="why">${esc(t.reason || '')}${t.userTag ? ` <i>— you tagged: ${esc((REASONS.find(r => r[0] === t.userTag) || [0, t.userTag])[1])}</i>` : ''}</div><div class="mono">${esc(t.setup || '')}${t.heldMin != null ? ', ' + t.heldMin + ' min' : ''}${t.simulated ? ', simulated' : ''}${t.ts ? ', ' + ago(t.ts) : ''}</div>
+      ${t.userTag ? '' : `<div class="chips" style="margin-top:8px"><span style="font-size:12px;color:var(--mut)">Was this you?</span>${REASONS.map(([k, l]) => `<button class="chip" data-tag="${k}" data-id="${esc(t.id || t.mint)}">${l}</button>`).join('')}</div>`}</div>`).join('')
     : empty('No closed trades yet', 'Finished trades show their result and the rule that ended them.');
 }
 
