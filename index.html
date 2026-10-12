@@ -246,6 +246,7 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
     <button role="tab" data-v="signals" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M7.5 7.5a6.4 6.4 0 0 0 0 9M16.5 7.5a6.4 6.4 0 0 1 0 9M4.5 4.5a10.6 10.6 0 0 0 0 15M19.5 4.5a10.6 10.6 0 0 1 0 15"/></svg>Signals</button>
     <button role="tab" data-v="mirror" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Pump.fun</button>
     <button role="tab" data-v="learn" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Learn</button>
+    <button role="tab" data-v="reports" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>Reports</button>
   </nav>
 
   <!-- NOW -->
@@ -338,6 +339,12 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
     <div class="card" id="gates"></div>
     <h2>Where coins come from</h2>
     <div class="card" id="sources"></div>
+  </section>
+
+  <!-- REPORTS -->
+  <section class="view" id="v-reports">
+    <h2>Full report every 10 trades <span class="n" id="repN"></span></h2>
+    <div class="stack" id="reports"></div>
   </section>
 
   <div class="foot" id="foot"></div>
@@ -561,18 +568,38 @@ function renderScene() {
 }
 
 /* ---------- render: TRADES ---------- */
+function peChip(id) {
+  const p = ((DATA.postexit || {}).done || []).find(x => x.id === id);
+  if (!p || p.lastMovePct == null) return '';
+  return ` · <span class="${p.lastMovePct >= 0 ? 'g' : 'r'}">+5m ${p.lastMovePct > 0 ? '+' : ''}${p.lastMovePct}%</span>`;
+}
 function renderTrades() {
   const man = (DATA.learn && DATA.learn.recent) || [];
   $('manN').textContent = man.length ? `${man.filter(m => !m.reason).length} to tag` : '';
-  $('manual').innerHTML = man.length ? man.map(m => `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px">${esc(m.symbol)}</span><span class="${(m.pnlSolEstimate || 0) >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(m.pnlSolEstimate)} SOL est.</span></div>
-      <div class="why">Held ${m.heldMin} min, peaked at ${(m.peakRatio || 1).toFixed(2)}x${m.bundleScore ? ', bundle risk ' + m.bundleScore : ''}. ${m.reason ? 'Your reason is saved.' : 'Why did you close it?'}</div>
-      <div class="chips">${REASONS.map(([k, l]) => `<button class="chip ${m.reason === k ? 'on' : ''}" data-tag="${k}" data-id="${esc(m.id)}">${l}</button>`).join('')}</div></div>`).join('')
+  $('manual').innerHTML = man.length ? man.map(m => {
+      const real = m.pnlSol != null, pv = real ? m.pnlSol : m.pnlSolEstimate;
+      return `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px">${esc(m.symbol)}</span><span class="${(pv || 0) >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(pv)} SOL${real ? '' : ' est.'}</span></div>
+      <div class="why">Held ${m.heldMin} min, peaked at ${(m.peakRatio || 1).toFixed(2)}x${m.bundleScore ? ', bundle risk ' + m.bundleScore : ''}${peChip(m.id)}. ${m.reason ? 'Your reason is saved.' : 'Why did you close it?'}</div>
+      <div class="chips">${REASONS.map(([k, l]) => `<button class="chip ${m.reason === k ? 'on' : ''}" data-tag="${k}" data-id="${esc(m.id)}">${l}</button>`).join('')}</div></div>`;
+    }).join('')
     : empty('Nothing closed by hand yet', 'When you sell a position in your own wallet, it lands here within about 30 seconds. Tag why, and the bot learns what you keep exiting.');
   const closed = (DATA.trades || []).filter(t => t.type === 'close' && !t.manual);
   $('closedN').textContent = closed.length ? closed.length + ' recent' : '';
   $('trades').innerHTML = closed.length ? closed.slice(0, 20).map(t => `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px">${esc(t.symbol)}</span><span class="${t.pnlSol >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(t.pnlSol)} SOL</span></div>
-      <div class="why">${esc(t.reason || '')}</div><div class="mono">${esc(t.setup || '')}${t.heldMin != null ? ', ' + t.heldMin + ' min' : ''}${t.simulated ? ', simulated' : ''}${t.ts ? ', ' + ago(t.ts) : ''}</div></div>`).join('')
+      <div class="why">${esc(t.reason || '')}</div><div class="mono">${esc(t.setup || '')}${t.heldMin != null ? ', ' + t.heldMin + ' min' : ''}${t.simulated ? ', simulated' : ''}${t.ts ? ', ' + ago(t.ts) : ''}${peChip(t.id)}</div></div>`).join('')
     : empty('No closed trades yet', 'Finished trades show their result and the rule that ended them.');
+}
+
+/* ---------- render: REPORTS ---------- */
+function renderReports() {
+  const reps = DATA.reports || [];
+  $('repN').textContent = reps.length ? reps.length + ' total' : '';
+  $('reports').innerHTML = reps.length ? reps.map(rp => `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px">Report #${rp.index}</span><span class="${rp.netSol >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(rp.netSol)} SOL</span></div>
+      <div class="why">${rp.trades} trades · ${rp.wins}W / ${rp.losses}L · avg win ${rp.avgWinSol ?? '—'} · avg loss ${rp.avgLossSol ?? '—'} · median hold ${rp.medianHoldMin ?? '—'} min</div>
+      <div class="mono">You: ${rp.manual.n} trades, ${signed(rp.manual.netSol)} · Bot: ${rp.bot.n} trades, ${signed(rp.bot.netSol)} · Best ${esc(rp.best ? rp.best.symbol : '—')} ${rp.best ? signed(rp.best.pnlSol) : ''} · Worst ${esc(rp.worst ? rp.worst.symbol : '—')} ${rp.worst ? signed(rp.worst.pnlSol) : ''}</div>
+      <div class="mono">After exits: ${rp.postExit.tracked} tracked · ${rp.postExit.ranAfterExit} kept running · ${rp.postExit.diedAfterExit} died · freshness vetoes ${rp.staleAborts}</div>
+      <div class="mono">${(rp.rows || []).map(x => `${esc(x.symbol)}${x.manual ? ' (you)' : ''} ${x.pnlSol == null ? '—' : signed(x.pnlSol)}`).join(' · ')}</div></div>`).join('')
+    : empty('No reports yet', 'A full report lands here after every 10 closed trades.');
 }
 
 /* ---------- render: SIGNALS ---------- */
@@ -671,7 +698,7 @@ function renderLearn() {
 let failures = 0;
 async function load() {
   const need = ['state', 'report', 'signals', 'trades'];
-  const [state, report, signals, trades, lists, learn] = await Promise.allSettled([get('/state'), get('/report'), get('/signals?limit=60'), get('/trades'), get('/pumplists'), get('/learn')]);
+  const [state, report, signals, trades, lists, learn, postexit, reports] = await Promise.allSettled([get('/state'), get('/report'), get('/signals?limit=60'), get('/trades'), get('/pumplists'), get('/learn'), get('/postexit'), get('/reports')]);
   const val = r => r.status === 'fulfilled' ? r.value : null;
   if (!val(state)) {
     failures++;
@@ -680,9 +707,9 @@ async function load() {
     $('banner').classList.add('on'); return;
   }
   failures = 0; OFFLINE = false; $('banner').classList.remove('on');
-  DATA = { state: val(state), report: val(report) || {}, signals: val(signals) || [], trades: val(trades) || [], learn: val(learn) || { recent: [], report: {} } };
+  DATA = { state: val(state), report: val(report) || {}, signals: val(signals) || [], trades: val(trades) || [], learn: val(learn) || { recent: [], report: {} }, postexit: val(postexit) || { pending: [], done: [] }, reports: val(reports) || [] };
   mirrorData = val(lists) || {}; await loadServerRows();
-  renderNow(); renderTrades(); renderSignals(); renderMirror(); renderLearn();
+  renderNow(); renderTrades(); renderSignals(); renderMirror(); renderLearn(); renderReports();
 }
 setView(view); renderMirror(); load(); setInterval(load, REFRESH_MS);
 </script>
