@@ -211,6 +211,13 @@ h2 .n{font-weight:500;color:var(--faint)}
 .mancard .mbody{display:none}
 .mancard.open .mbody{display:block}
 .mancard .mtag{font:500 12px var(--body);color:var(--dim);margin-left:8px}
+.collsec{margin-bottom:16px}
+.collsec .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer}
+.collsec .chev{color:var(--dim);font-size:12px;display:inline-block;transition:transform .15s}
+.collsec.open .chev{transform:rotate(90deg)}
+.collsec .secbody{display:none;margin-top:10px}
+.collsec.open .secbody{display:block}
+.collsec .n{font:500 13px var(--body);color:var(--dim)}
 .fb{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid var(--rule2);font-size:13px;color:var(--dim)}
 .fb div{display:flex;gap:8px}
 .fb button{width:42px;height:36px;border-radius:10px;border:1px solid var(--rule);background:var(--panel2);font-size:16px;font-weight:700}
@@ -295,10 +302,14 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
 
   <!-- TRADES -->
   <section class="view" id="v-trades">
-    <h2>Closed by you <span class="n" id="manN"></span></h2>
-    <div class="stack" id="manual"></div>
-    <h2>Closed by the bot <span class="n" id="closedN"></span></h2>
-    <div class="stack grid2" id="trades"></div>
+    <div class="collsec" id="secManual">
+      <div class="card sechead" data-sectoggle="secManual"><span style="font:700 17px var(--display)">Closed by you <span class="n" id="manN"></span></span><span class="chev">▸</span></div>
+      <div class="secbody"><div class="stack" id="manual"></div></div>
+    </div>
+    <div class="collsec" id="secBot">
+      <div class="card sechead" data-sectoggle="secBot"><span style="font:700 17px var(--display)">Closed by the bot <span class="n" id="closedN"></span></span><span class="chev">▸</span></div>
+      <div class="secbody"><div class="stack grid2" id="trades"></div></div>
+    </div>
   </section>
 
   <!-- SIGNALS -->
@@ -417,6 +428,7 @@ async function tagExit(id, reason, btn) {
 document.addEventListener('click', e => {
   const f = e.target.closest('[data-fb]'); if (f) return feedback(f);
   const mt = e.target.closest('[data-mtoggle]'); if (mt) { const id = mt.dataset.mtoggle; if (MAN_OPEN.has(id)) MAN_OPEN.delete(id); else MAN_OPEN.add(id); const card = mt.closest('.mancard'); if (card) card.classList.toggle('open'); return; }
+  const st = e.target.closest('[data-sectoggle]'); if (st) { const sec = document.getElementById(st.dataset.sectoggle); if (sec) sec.classList.toggle('open'); return; }
   const t = e.target.closest('[data-tag]'); if (t) return tagExit(t.dataset.id, t.dataset.tag, t);
   const c = e.target.closest('[data-copy]'); if (c) { try { navigator.clipboard.writeText(c.dataset.copy); c.textContent = 'Copied'; setTimeout(() => c.textContent = 'Copy address', 1200); } catch {} }
 });
