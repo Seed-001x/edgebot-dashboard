@@ -218,6 +218,12 @@ h2 .n{font-weight:500;color:var(--faint)}
 .collsec .secbody{display:none;margin-top:10px}
 .collsec.open .secbody{display:block}
 .collsec .n{font:500 13px var(--body);color:var(--dim)}
+.repcard .row1{cursor:pointer}
+.repcard .chev{color:var(--dim);font-size:11px;margin-left:8px;display:inline-block;transition:transform .15s}
+.repcard.open .chev{transform:rotate(90deg)}
+.repcard .mbody{display:none}
+.repcard.open .mbody{display:block}
+.repcard .mtag{font:500 12px var(--body);color:var(--dim);margin-left:8px}
 .fb{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid var(--rule2);font-size:13px;color:var(--dim)}
 .fb div{display:flex;gap:8px}
 .fb button{width:42px;height:36px;border-radius:10px;border:1px solid var(--rule);background:var(--panel2);font-size:16px;font-weight:700}
@@ -388,6 +394,7 @@ let reacted = store.get('edgebot_reacted', {});
 let view = store.get('edgebot_view', 'now'), sigFilter = 'all', mirrorTab = 'trending', mirrorData = {}, serverRows = null;
 let DATA = {};
 const MAN_OPEN = new Set(); // manual-exit cards the user has expanded (survives re-renders)
+const REP_OPEN = new Set(); // report cards the user has expanded (survives re-renders)
 
 async function get(p) {
   const r = await fetch(API + p + (p.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
@@ -429,6 +436,7 @@ document.addEventListener('click', e => {
   const f = e.target.closest('[data-fb]'); if (f) return feedback(f);
   const mt = e.target.closest('[data-mtoggle]'); if (mt) { const id = mt.dataset.mtoggle; if (MAN_OPEN.has(id)) MAN_OPEN.delete(id); else MAN_OPEN.add(id); const card = mt.closest('.mancard'); if (card) card.classList.toggle('open'); return; }
   const st = e.target.closest('[data-sectoggle]'); if (st) { const sec = document.getElementById(st.dataset.sectoggle); if (sec) sec.classList.toggle('open'); return; }
+  const rp = e.target.closest('[data-reptoggle]'); if (rp) { const id = Number(rp.dataset.reptoggle); if (REP_OPEN.has(id)) REP_OPEN.delete(id); else REP_OPEN.add(id); const card = rp.closest('.repcard'); if (card) card.classList.toggle('open'); return; }
   const t = e.target.closest('[data-tag]'); if (t) return tagExit(t.dataset.id, t.dataset.tag, t);
   const c = e.target.closest('[data-copy]'); if (c) { try { navigator.clipboard.writeText(c.dataset.copy); c.textContent = 'Copied'; setTimeout(() => c.textContent = 'Copy address', 1200); } catch {} }
 });
@@ -637,14 +645,14 @@ function afterLine(a) {
 function renderReports() {
   const reps = DATA.reports || [];
   $('repN').textContent = reps.length ? reps.length + ' total' : '';
-  $('reports').innerHTML = reps.length ? reps.map(rp => `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px">Report #${rp.index}</span><span class="${rp.netSol >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(rp.netSol)} SOL</span></div>
-      <div class="why">${rp.trades} trades · ${rp.wins}W / ${rp.losses}L · avg win ${rp.avgWinSol ?? '—'} · avg loss ${rp.avgLossSol ?? '—'} · median hold ${rp.medianHoldMin ?? '—'} min</div>
+  $('reports').innerHTML = reps.length ? reps.map(rp => `<div class="card item repcard ${REP_OPEN.has(rp.index) ? 'open' : ''}"><div class="row1" data-reptoggle="${rp.index}"><span class="sym" style="font-size:18px">Report #${rp.index}<span class="mtag">${rp.trades} trades · ${rp.wins}W / ${rp.losses}L</span></span><span><span class="${rp.netSol >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(rp.netSol)} SOL</span><span class="chev">▸</span></span></div>
+      <div class="mbody"><div class="why">${rp.trades} trades · ${rp.wins}W / ${rp.losses}L · avg win ${rp.avgWinSol ?? '—'} · avg loss ${rp.avgLossSol ?? '—'} · median hold ${rp.medianHoldMin ?? '—'} min</div>
       <div class="mono">You: ${rp.manual.n} trades, ${signed(rp.manual.netSol)} · Bot: ${rp.bot.n} trades, ${signed(rp.bot.netSol)} · Best ${esc(rp.best ? rp.best.symbol : '—')} ${rp.best ? signed(rp.best.pnlSol) : ''} · Worst ${esc(rp.worst ? rp.worst.symbol : '—')} ${rp.worst ? signed(rp.worst.pnlSol) : ''}</div>
       <div class="mono">After exits: ${rp.postExit.tracked} tracked · ${rp.postExit.ranAfterExit} kept running · ${rp.postExit.diedAfterExit} died · freshness vetoes ${rp.staleAborts}</div>
       ${(rp.rows || []).map(x => { const ex = x.exit || x, en = x.entry || {}; return `<div class="item" style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px"><div class="row1"><span class="sym">${esc(x.symbol)}</span><span class="tag">${esc(x.setup || '')}</span>${ex.manual ? '<span class="tag you">you</span>' : ''}<span class="${(ex.pnlSol ?? 0) >= 0 ? 'g' : 'r'}" style="font:700 15px var(--display)">${ex.pnlSol == null ? '—' : signed(ex.pnlSol)}</span></div>
       <div class="mono">in ${en.mc != null ? money(en.mc) + ' MC' : ''}${condLine(en.conditions) ? ' · ' + esc(condLine(en.conditions)) : ''}</div>
       <div class="mono">out ${esc(ex.reason || '')}${ex.heldMin != null ? ' · ' + ex.heldMin.toFixed(1) + ' min' : ''}${ex.pnlSource ? ' · P&L ' + esc(ex.pnlSource) : ''}</div>
-      ${afterLine(x.after)}</div>`; }).join('')}</div>`).join('')
+      ${afterLine(x.after)}</div>`; }).join('')}</div></div>`).join('')
     : empty('No reports yet', 'A full report lands here after every 10 closed trades.');
 }
 
