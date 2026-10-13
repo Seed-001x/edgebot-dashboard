@@ -205,6 +205,12 @@ h2 .n{font-weight:500;color:var(--faint)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{background:var(--panel2);border:1px solid var(--rule);border-radius:99px;padding:6px 12px;font-size:13px;font-weight:500}
 .chip:hover{border-color:var(--uv)} .chip.on{background:var(--uv-soft);border-color:var(--uv);color:#cfc8ff}
+.mancard .row1{cursor:pointer}
+.mancard .chev{color:var(--dim);font-size:11px;margin-left:8px;display:inline-block;transition:transform .15s}
+.mancard.open .chev{transform:rotate(90deg)}
+.mancard .mbody{display:none}
+.mancard.open .mbody{display:block}
+.mancard .mtag{font:500 12px var(--body);color:var(--dim);margin-left:8px}
 .fb{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid var(--rule2);font-size:13px;color:var(--dim)}
 .fb div{display:flex;gap:8px}
 .fb button{width:42px;height:36px;border-radius:10px;border:1px solid var(--rule);background:var(--panel2);font-size:16px;font-weight:700}
@@ -370,6 +376,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ==
 let reacted = store.get('edgebot_reacted', {});
 let view = store.get('edgebot_view', 'now'), sigFilter = 'all', mirrorTab = 'trending', mirrorData = {}, serverRows = null;
 let DATA = {};
+const MAN_OPEN = new Set(); // manual-exit cards the user has expanded (survives re-renders)
 
 async function get(p) {
   const r = await fetch(API + p + (p.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
@@ -403,11 +410,13 @@ async function tagExit(id, reason, btn) {
     const r = await fetch(API + '/exittag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, reason }) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const m = (DATA.learn.recent || []).find(x => x.id === id); if (m) m.reason = reason;
+    MAN_OPEN.delete(id); // tagged: fold the card shut, the reason shows on its face
     renderTrades(); renderLearn();
   } catch (e) { btn.disabled = false; flash('Tag did not save: ' + e.message); }
 }
 document.addEventListener('click', e => {
   const f = e.target.closest('[data-fb]'); if (f) return feedback(f);
+  const mt = e.target.closest('[data-mtoggle]'); if (mt) { const id = mt.dataset.mtoggle; if (MAN_OPEN.has(id)) MAN_OPEN.delete(id); else MAN_OPEN.add(id); const card = mt.closest('.mancard'); if (card) card.classList.toggle('open'); return; }
   const t = e.target.closest('[data-tag]'); if (t) return tagExit(t.dataset.id, t.dataset.tag, t);
   const c = e.target.closest('[data-copy]'); if (c) { try { navigator.clipboard.writeText(c.dataset.copy); c.textContent = 'Copied'; setTimeout(() => c.textContent = 'Copy address', 1200); } catch {} }
 });
@@ -578,9 +587,10 @@ function renderTrades() {
   $('manN').textContent = man.length ? `${man.filter(m => !m.reason).length} to tag` : '';
   $('manual').innerHTML = man.length ? man.map(m => {
       const real = m.pnlSol != null, pv = real ? m.pnlSol : m.pnlSolEstimate;
-      return `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px">${esc(m.symbol)}</span><span class="${(pv || 0) >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(pv)} SOL${real ? '' : ' est.'}</span></div>
-      <div class="why">Held ${m.heldMin} min, peaked at ${(m.peakRatio || 1).toFixed(2)}x${m.bundleScore ? ', bundle risk ' + m.bundleScore : ''}${peChip(m.id)}. ${m.reason ? 'Your reason is saved.' : 'Why did you close it?'}</div>
-      <div class="chips">${REASONS.map(([k, l]) => `<button class="chip ${m.reason === k ? 'on' : ''}" data-tag="${k}" data-id="${esc(m.id)}">${l}</button>`).join('')}</div></div>`;
+      const open = MAN_OPEN.has(m.id), rlabel = m.reason ? (REASONS.find(r => r[0] === m.reason) || [])[1] : '';
+      return `<div class="card item mancard ${open ? 'open' : ''}"><div class="row1" data-mtoggle="${esc(m.id)}"><span class="sym" style="font-size:18px">${esc(m.symbol)}${rlabel ? `<span class="mtag">${esc(rlabel)}</span>` : ''}</span><span><span class="${(pv || 0) >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(pv)} SOL${real ? '' : ' est.'}</span><span class="chev">▸</span></span></div>
+      <div class="mbody"><div class="why">Held ${m.heldMin} min, peaked at ${(m.peakRatio || 1).toFixed(2)}x${m.bundleScore ? ', bundle risk ' + m.bundleScore : ''}${peChip(m.id)}. ${m.reason ? 'Your reason is saved.' : 'Why did you close it?'}</div>
+      <div class="chips">${REASONS.map(([k, l]) => `<button class="chip ${m.reason === k ? 'on' : ''}" data-tag="${k}" data-id="${esc(m.id)}">${l}</button>`).join('')}</div></div></div>`;
     }).join('')
     : empty('Nothing closed by hand yet', 'When you sell a position in your own wallet, it lands here within about 30 seconds. Tag why, and the bot learns what you keep exiting.');
   const closed = (DATA.trades || []).filter(t => t.type === 'close' && !t.manual);
