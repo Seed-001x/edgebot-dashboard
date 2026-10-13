@@ -389,6 +389,17 @@ const ageOf = t => { if (t == null) return null; if (t < 1e12) t *= 1000; const 
 const chartUrl = m => 'https://pump.fun/coin/' + encodeURIComponent(m);
 const empty = (title, body) => `<div class="empty"><b>${title}</b>${body}</div>`;
 const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+// Write endpoints need the manage key. It's kept only in this browser's local storage:
+// enter it once per device; a visitor without it can view but their writes get a 401.
+async function apiPost(pathName, bodyObj) {
+  const send = () => fetch(API + pathName, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(store.get('edgebot_admin') ? { 'x-admin-key': store.get('edgebot_admin') } : {}) }, body: JSON.stringify(bodyObj) });
+  let r = await send();
+  if (r.status === 401) {
+    const k = prompt('Manage key — only you have it. It stays on this device:');
+    if (k) { store.set('edgebot_admin', k.trim()); r = await send(); }
+  }
+  return r;
+}
 
 let reacted = store.get('edgebot_reacted', {});
 let view = store.get('edgebot_view', 'now'), sigFilter = 'all', mirrorTab = 'trending', mirrorData = {}, serverRows = null;
@@ -416,7 +427,7 @@ $('sigSeg').addEventListener('click', e => { const b = e.target.closest('button'
 async function feedback(btn) {
   const d = btn.dataset; btn.disabled = true;
   try {
-    const r = await fetch(API + '/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mint: d.mint, symbol: d.symbol, good: d.good === '1', signalId: d.sid, kind: d.kind }) });
+    const r = await apiPost('/feedback', { mint: d.mint, symbol: d.symbol, good: d.good === '1', signalId: d.sid, kind: d.kind });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     reacted[d.sid || d.mint] = true; store.set('edgebot_reacted', reacted);
     const el = btn.closest('.card'); if (el) { el.style.opacity = '0'; el.style.transition = 'opacity .25s'; setTimeout(() => el.remove(), 260); }
@@ -425,7 +436,7 @@ async function feedback(btn) {
 async function tagExit(id, reason, btn) {
   btn.disabled = true;
   try {
-    const r = await fetch(API + '/exittag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, reason }) });
+    const r = await apiPost('/exittag', { id, reason });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const m = (DATA.learn.recent || []).find(x => x.id === id); if (m) m.reason = reason;
     MAN_OPEN.delete(id); // tagged: fold the card shut, the reason shows on its face
