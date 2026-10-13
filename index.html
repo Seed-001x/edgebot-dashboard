@@ -591,6 +591,27 @@ function renderTrades() {
 }
 
 /* ---------- render: REPORTS ---------- */
+function condLine(c) {
+  if (!c) return '';
+  const b = [];
+  if (c.gainPct != null) b.push(`+${Math.round(c.gainPct)}% move`);
+  if (c.chgH1 != null) b.push(`1h ${c.chgH1 >= 0 ? '+' : ''}${Math.round(c.chgH1)}%`);
+  if (c.chgM5 != null) b.push(`5m ${c.chgM5 >= 0 ? '+' : ''}${Math.round(c.chgM5)}%`);
+  if (c.buyRatioM5 != null) b.push(`buys ${Math.round(c.buyRatioM5 * 100)}%`);
+  if (c.volM5 != null) b.push(`vol5m ${money(c.volM5)}`);
+  if (c.volH1 != null) b.push(`vol1h ${money(c.volH1)}`);
+  if (c.drawFromPeak != null) b.push(`${Math.round(c.drawFromPeak * 100)}% off high`);
+  if (c.roundTrip != null) b.push(`rt ${c.roundTrip.toFixed(2)}`);
+  return b.join(' · ');
+}
+function afterLine(a) {
+  if (!a) return '<div class="mono">after: no data</div>';
+  if (a.tracking) return '<div class="mono">after: still tracking (5 min)…</div>';
+  const pc = a.lastMovePct == null ? '' : `after: <span class="${a.lastMovePct >= 0 ? 'g' : 'r'}">${a.lastMovePct >= 0 ? '+' : ''}${a.lastMovePct.toFixed(0)}% in 5m</span>`;
+  const pk = a.peakMovePct != null ? ` · peak ${a.peakMovePct >= 0 ? '+' : ''}${a.peakMovePct.toFixed(0)}%` : '';
+  const tr = a.troughMovePct != null ? ` · low ${a.troughMovePct.toFixed(0)}%` : '';
+  return `<div class="mono">${pc}${pk}${tr}</div>`;
+}
 function renderReports() {
   const reps = DATA.reports || [];
   $('repN').textContent = reps.length ? reps.length + ' total' : '';
@@ -598,7 +619,10 @@ function renderReports() {
       <div class="why">${rp.trades} trades · ${rp.wins}W / ${rp.losses}L · avg win ${rp.avgWinSol ?? '—'} · avg loss ${rp.avgLossSol ?? '—'} · median hold ${rp.medianHoldMin ?? '—'} min</div>
       <div class="mono">You: ${rp.manual.n} trades, ${signed(rp.manual.netSol)} · Bot: ${rp.bot.n} trades, ${signed(rp.bot.netSol)} · Best ${esc(rp.best ? rp.best.symbol : '—')} ${rp.best ? signed(rp.best.pnlSol) : ''} · Worst ${esc(rp.worst ? rp.worst.symbol : '—')} ${rp.worst ? signed(rp.worst.pnlSol) : ''}</div>
       <div class="mono">After exits: ${rp.postExit.tracked} tracked · ${rp.postExit.ranAfterExit} kept running · ${rp.postExit.diedAfterExit} died · freshness vetoes ${rp.staleAborts}</div>
-      <div class="mono">${(rp.rows || []).map(x => `${esc(x.symbol)}${x.manual ? ' (you)' : ''} ${x.pnlSol == null ? '—' : signed(x.pnlSol)}`).join(' · ')}</div></div>`).join('')
+      ${(rp.rows || []).map(x => { const ex = x.exit || x, en = x.entry || {}; return `<div class="item" style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px"><div class="row1"><span class="sym">${esc(x.symbol)}</span><span class="tag">${esc(x.setup || '')}</span>${ex.manual ? '<span class="tag you">you</span>' : ''}<span class="${(ex.pnlSol ?? 0) >= 0 ? 'g' : 'r'}" style="font:700 15px var(--display)">${ex.pnlSol == null ? '—' : signed(ex.pnlSol)}</span></div>
+      <div class="mono">in ${en.mc != null ? money(en.mc) + ' MC' : ''}${condLine(en.conditions) ? ' · ' + esc(condLine(en.conditions)) : ''}</div>
+      <div class="mono">out ${esc(ex.reason || '')}${ex.heldMin != null ? ' · ' + ex.heldMin.toFixed(1) + ' min' : ''}${ex.pnlSource ? ' · P&L ' + esc(ex.pnlSource) : ''}</div>
+      ${afterLine(x.after)}</div>`; }).join('')}</div>`).join('')
     : empty('No reports yet', 'A full report lands here after every 10 closed trades.');
 }
 
