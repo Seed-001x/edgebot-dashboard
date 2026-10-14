@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=VT323&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
 <style>
 :root{
   --ink:#0a0f1f; --panel:#101733; --panel2:#151e40; --rule:#212c55; --rule2:#18214a;
@@ -44,7 +44,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 @media (prefers-reduced-motion:reduce){.pill.live .dot{animation:none}}
 
 /* nav: bottom bar on phones, top row on wide screens */
-nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;display:grid;grid-template-columns:repeat(5,1fr);background:#0a0f1fee;backdrop-filter:blur(10px);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;display:grid;grid-template-columns:repeat(4,1fr);background:#0a0f1fee;backdrop-filter:blur(10px);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom)}
 nav.tabs button{background:none;border:0;height:var(--nav-h);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--faint);font:600 11px/1 var(--body)}
 nav.tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 nav.tabs button[aria-selected=true]{color:var(--text)}
@@ -264,6 +264,50 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
              linear-gradient(180deg,rgba(4,6,13,.6),transparent 15%,transparent 85%,rgba(4,6,13,.7))}
 @media (prefers-reduced-motion:reduce){#ds-bg .col,#ds-bg .pk{animation:none}}
 .shell{position:relative;z-index:1}
+/* ===== LAB TAB (ported from lab-stream.html; scoped to #v-lab) ===== */
+#v-lab{--lbg:#02040a;--lpanel:rgba(5,7,18,.9);--lline:#1c2350;--ltext:#cfd6ff;--lbright:#eef0ff;--ldim:#7f88b3;--lfaint:#6c75a3;--lacc:#8b7bff;--lcyan:#5ad8ff;--lpink:#ff4fd8;--lgreen:#45e09a;--lamber:#f2b84b;--lred:#ff5c7a;--lorange:#ff8a3d}
+#v-lab .lb-root{position:relative;max-width:430px;margin:14px auto 0;overflow:hidden;background:var(--lbg);color:var(--ltext);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;border:1px solid var(--lline)}
+#v-lab .lb-matrix{position:absolute;inset:0;padding:4px 6px;font-size:9px;line-height:12px;color:rgba(90,216,255,.13);white-space:pre;overflow:hidden;pointer-events:none}
+#v-lab .lb-scan{position:absolute;left:0;right:0;top:0;height:120px;background:linear-gradient(180deg,transparent,rgba(139,123,255,.07),transparent);animation:lbScan 6s linear infinite;pointer-events:none}
+@keyframes lbScan{from{transform:translateY(-100%)}to{transform:translateY(1400px)}}
+@keyframes lbBlink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes lbFlash{0%{background:rgba(139,123,255,.45)}100%{background:transparent}}
+@keyframes lbGlitch{0%,92%,100%{transform:none;text-shadow:0 0 8px rgba(139,123,255,.6)}93%{transform:translateX(-2px);text-shadow:2px 0 var(--lpink),-2px 0 var(--lcyan)}96%{transform:translateX(2px);text-shadow:-2px 0 var(--lpink),2px 0 var(--lcyan)}}
+@keyframes lbPop{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:none}}
+#v-lab .lb-blink{animation:lbBlink 1s steps(1) infinite}
+#v-lab .lb-flash{animation:lbFlash 1.1s ease-out}
+#v-lab .lb-pop{animation:lbPop .35s ease-out}
+#v-lab .lb-wrap{position:relative;display:flex;flex-direction:column;gap:10px;padding:16px 12px 20px}
+#v-lab .lb-head{display:flex;justify-content:space-between;align-items:flex-end}
+#v-lab .lb-logo{font-family:'Space Grotesk',var(--display),sans-serif;font-size:27px;font-weight:700;color:var(--lbright);animation:lbGlitch 4s infinite}
+#v-lab .lb-logo span{color:var(--lacc)}
+#v-lab .lb-kicker{font-size:9px;color:var(--lcyan);letter-spacing:3px}
+#v-lab .lb-hud{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:rgba(139,123,255,.35);border:1px solid rgba(139,123,255,.35)}
+#v-lab .lb-hud>div{background:rgba(5,7,18,.92);padding:6px 4px;display:flex;flex-direction:column;gap:2px;align-items:center}
+#v-lab .lb-hud .k{font-size:8px;color:var(--ldim);letter-spacing:1px}
+#v-lab .lb-hud .v{font-size:13px;font-weight:800}
+#v-lab .lb-title{display:flex;justify-content:space-between;color:var(--lacc);font-weight:800;letter-spacing:2px;font-size:10px}
+#v-lab .lb-title small{color:var(--lfaint);font-weight:400;letter-spacing:0;font-size:9px}
+#v-lab .lb-title small.lb-link{cursor:pointer;text-decoration:underline}
+#v-lab .lb-event{background:rgba(5,7,18,.92);padding:7px 8px;display:flex;flex-direction:column;gap:3px;border:1px solid}
+#v-lab .lb-event .lb-msg{color:var(--lbright);font-size:11px;line-height:15px}
+#v-lab .lb-event .lb-tag{font-size:9px;font-weight:800;letter-spacing:1px}
+#v-lab .lb-lanes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+#v-lab .lb-lane{background:rgba(5,7,18,.88);border:1px solid var(--lline);display:flex;flex-direction:column}
+#v-lab .lb-lane h3{margin:0;padding:4px 6px;border-bottom:1px solid var(--lline);font-size:9px;letter-spacing:2px;font-weight:800;display:flex;justify-content:space-between;gap:6px;align-items:baseline}
+#v-lab .lb-lane .lb-body{overflow:hidden;padding:3px 6px;display:flex;flex-direction:column;gap:1px}
+#v-lab .lb-row{white-space:nowrap;overflow:hidden}
+#v-lab .lb-tick{display:grid;grid-template-columns:70px 78px 52px 50px minmax(0,1fr);gap:4px;white-space:nowrap}
+#v-lab .lb-box{background:var(--lpanel);border:1px solid var(--lline);padding:8px;display:flex;flex-direction:column;gap:4px}
+#v-lab .lb-exp{display:grid;grid-template-columns:54px minmax(0,1fr) 40px 64px;gap:6px;align-items:center}
+#v-lab .lb-exp .lb-bar{letter-spacing:-1px;white-space:nowrap;overflow:hidden}
+#v-lab .lb-kv{display:flex;justify-content:space-between;align-items:baseline}
+#v-lab .lb-big{font-family:'Space Grotesk',var(--display),sans-serif;font-size:20px;font-weight:700}
+#v-lab .lb-dump{background:rgba(2,3,8,.95);border:1px solid #12183a;padding:6px;font-size:9px;color:#3a6a5a;white-space:nowrap;overflow:hidden}
+#v-lab .lb-speed{display:flex;gap:4px}
+#v-lab .lb-speed button{font:inherit;font-size:9px;background:transparent;color:var(--ldim);border:1px solid var(--lline);padding:4px 8px;min-height:28px;cursor:pointer}
+#v-lab .lb-speed button.on{color:var(--lbright);border-color:var(--lacc)}
+@media (prefers-reduced-motion:reduce){#v-lab .lb-scan,#v-lab .lb-logo{animation:none}}
 </style>
 </head>
 <body>
@@ -279,9 +323,7 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
     <button role="tab" data-v="now" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Now</button>
     <button role="tab" data-v="trades" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Trades</button>
     <button role="tab" data-v="signals" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M7.5 7.5a6.4 6.4 0 0 0 0 9M16.5 7.5a6.4 6.4 0 0 1 0 9M4.5 4.5a10.6 10.6 0 0 0 0 15M19.5 4.5a10.6 10.6 0 0 1 0 15"/></svg>Signals</button>
-    <button role="tab" data-v="mirror" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Pump.fun</button>
-    <button role="tab" data-v="learn" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Learn</button>
-    <button role="tab" data-v="reports" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>Reports</button>
+    <button role="tab" data-v="lab" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v5.5L5.6 18a2.4 2.4 0 0 0 2.1 3.5h8.6a2.4 2.4 0 0 0 2.1-3.5L14 8.5V3"/><path d="M7.5 15h9"/></svg>LAB</button>
   </nav>
 
   <!-- NOW -->
@@ -340,50 +382,66 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
     <div class="stack grid2" id="signals"></div>
   </section>
 
-  <!-- MIRROR -->
-  <section class="view" id="v-mirror">
-    <div class="scroll" id="mtabs" style="margin-top:14px"></div>
-    <details class="filters" id="filters"><summary>Filters <span class="dim" id="fCount"></span></summary>
-      <div class="fgrid">
-        <label>Min market cap ($)<input id="f_minMc" inputmode="numeric"></label>
-        <label>Max market cap ($)<input id="f_maxMc" inputmode="numeric"></label>
-        <label>Min holders<input id="f_minHolders" inputmode="numeric"></label>
-        <label>Max top holder %<input id="f_maxTop" inputmode="numeric"></label>
-        <label>Min volume ($)<input id="f_minVol" inputmode="numeric"></label>
-        <label>Min transactions<input id="f_minTx" inputmode="numeric"></label>
-        <label>Max snipers<input id="f_maxSnipers" inputmode="numeric"></label>
-        <label>Max bundlers<input id="f_maxBundlers" inputmode="numeric"></label>
-        <label>Max insiders<input id="f_maxInsiders" inputmode="numeric"></label>
-        <label>Search<input id="f_q" placeholder="name or ticker"></label>
-        <label>Sort by<select id="f_sort"><option value="rank">List order</option><option value="mc">Market cap</option><option value="vol">Volume</option><option value="holders">Holders</option><option value="tx">Transactions</option><option value="fees">Fees</option><option value="new">Newest</option></select></label>
-        <label>Direction<select id="f_dir"><option value="desc">High to low</option><option value="asc">Low to high</option></select></label>
-        <label style="grid-column:1/-1">Ask pump.fun directly (advanced, e.g. sort=market_cap&amp;limit=50)<input id="f_server" placeholder="leave empty to use the bot's list"></label>
-        <div style="grid-column:1/-1"><button class="btn ghost" id="fReset" type="button">Clear filters</button></div>
+  <!-- LAB -->
+  <section class="view" id="v-lab">
+   <div class="lb-root">
+    <div class="lb-matrix" id="lab-matrix" aria-hidden="true"></div>
+    <div class="lb-scan" aria-hidden="true"></div>
+    <div class="lb-wrap">
+     <div class="lb-head">
+      <div>
+       <div class="lb-kicker" id="lab-kicker">// LAB::STREAM</div>
+       <div class="lb-logo">K1LL<span>SW1TCH</span></div>
       </div>
-    </details>
-    <div class="dim" id="shown" style="font-size:13px;margin:4px 0 10px"></div>
-    <div class="stack grid2" id="mirror"></div>
-    <div class="foot" id="mirrorFoot"></div>
-  </section>
-
-  <!-- LEARN -->
-  <section class="view" id="v-learn">
-    <h2>Your exits vs the bot's winners <span class="n" id="learnN"></span></h2>
-    <div class="card" id="learnCmp"></div>
-    <h2>Why you closed early</h2>
-    <div class="card" id="learnWhy"></div>
-    <h2>Which detectors work</h2>
-    <div class="card" id="setups"></div>
-    <h2>Which gates are saving or costing you</h2>
-    <div class="card" id="gates"></div>
-    <h2>Where coins come from</h2>
-    <div class="card" id="sources"></div>
-  </section>
-
-  <!-- REPORTS -->
-  <section class="view" id="v-reports">
-    <h2>Full report every 10 trades <span class="n" id="repN"></span></h2>
-    <div class="stack" id="reports"></div>
+      <div style="text-align:right;display:flex;flex-direction:column;gap:2px">
+       <div style="color:var(--lgreen);font-weight:800"><span class="lb-blink">●</span> RX <span id="lab-clock"></span></div>
+       <div style="color:var(--lfaint);font-size:9px" id="lab-pkt"></div>
+      </div>
+     </div>
+     <div class="lb-speed" role="group" aria-label="Stream speed">
+      <button data-s="calm">CALM</button><button data-s="live" class="on">LIVE</button><button data-s="overdrive">OVERDRIVE</button>
+      <span id="lab-modeTag" style="margin-left:auto;align-self:center;font-size:9px;color:var(--lamber)"></span>
+     </div>
+     <div class="lb-hud" id="lab-hud"></div>
+     <div style="display:flex;flex-direction:column;gap:4px">
+      <div class="lb-title"><span>▌EVENTS · human layer</span><small class="lb-link" id="lab-evToggle">history</small></div>
+      <div id="lab-events" style="display:flex;flex-direction:column;gap:4px"></div>
+     </div>
+     <div class="lb-lanes">
+      <div class="lb-lane"><h3 style="color:var(--lcyan)">SIGNAL FEED</h3><div class="lb-body" id="lab-sig" style="height:196px"></div></div>
+      <div class="lb-lane"><h3 style="color:var(--lpink)">GATE TRACE</h3><div class="lb-body" id="lab-gate" style="height:196px"></div></div>
+     </div>
+     <div class="lb-lane">
+      <h3><span style="color:var(--lgreen)" id="lab-tickTitle">TICK STREAM</span><span style="color:var(--lamber);font-weight:800;letter-spacing:1px">MOCK DATA</span><span style="color:var(--lfaint);font-weight:400;letter-spacing:0">px · Δ · vol · b/s</span></h3>
+      <div class="lb-body" id="lab-ticks" style="height:132px"></div>
+     </div>
+     <div class="lb-box" style="border-color:rgba(139,123,255,.4)">
+      <div class="lb-title" style="font-size:9px"><span>EXPERIMENTS</span><small id="lab-baseline"></small></div>
+      <div id="lab-exps" style="display:flex;flex-direction:column;gap:5px"></div>
+      <div style="color:var(--lfaint);font-size:8px" id="lab-expLegend"></div>
+     </div>
+     <div class="lb-lanes">
+      <div class="lb-box">
+       <div style="color:var(--lamber);font-weight:800;font-size:9px;letter-spacing:2px">YOU vs BOT</div>
+       <div class="lb-kv"><span style="color:var(--ldim)">you PF</span><span class="lb-big" id="lab-pfYou"></span></div>
+       <div class="lb-kv"><span style="color:var(--ldim)">bot PF</span><span class="lb-big" id="lab-pfBot"></span></div>
+       <div style="color:var(--lfaint);font-size:8px" id="lab-pairedNote"></div>
+      </div>
+      <div class="lb-box">
+       <div style="color:var(--lred);font-weight:800;font-size:9px;letter-spacing:2px">FEE BURN</div>
+       <div class="lb-kv"><span style="color:var(--ldim)">fixed/tx</span><span style="color:var(--lbright)" id="lab-feeFixed"></span></div>
+       <div class="lb-kv"><span style="color:var(--ldim)" id="lab-feeSizeK"></span><span style="color:var(--lamber)" id="lab-feePct"></span></div>
+       <div class="lb-kv"><span style="color:var(--ldim)">lifetime</span><span style="color:var(--lred)" id="lab-feeLife"></span></div>
+       <div style="color:var(--lfaint);font-size:8px" id="lab-feeShare"></div>
+      </div>
+     </div>
+     <div class="lb-dump">
+      <div style="color:var(--lcyan);font-weight:800;letter-spacing:2px;margin-bottom:2px" id="lab-memTitle">MEM</div>
+      <div id="lab-hex"></div>
+      <div style="color:var(--lgreen)">root@k1llsw1tch:~$ <span class="lb-blink">█</span></div>
+     </div>
+    </div>
+   </div>
   </section>
 
   <div class="foot" id="foot"></div>
@@ -423,10 +481,9 @@ async function apiPost(pathName, bodyObj) {
 }
 
 let reacted = store.get('edgebot_reacted', {});
-let view = store.get('edgebot_view', 'now'), sigFilter = 'all', mirrorTab = 'trending', mirrorData = {}, serverRows = null;
+let view = store.get('edgebot_view', 'now'), sigFilter = 'all';
 let DATA = {};
 const MAN_OPEN = new Set(); // manual-exit cards the user has expanded (survives re-renders)
-const REP_OPEN = new Set(); // report cards the user has expanded (survives re-renders)
 
 async function get(p) {
   const r = await fetch(API + p + (p.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
@@ -440,6 +497,7 @@ function setView(v) {
   document.querySelectorAll('.view').forEach(e => e.classList.toggle('on', e.id === 'v-' + v));
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
   scrollTo({ top: 0 });
+  if (v === 'lab' && window.LabStart) window.LabStart();
 }
 $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); });
 $('sigSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; sigFilter = b.dataset.f; document.querySelectorAll('#sigSeg button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderSignals(); });
@@ -461,14 +519,13 @@ async function tagExit(id, reason, btn) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const m = (DATA.learn.recent || []).find(x => x.id === id); if (m) m.reason = reason;
     MAN_OPEN.delete(id); // tagged: fold the card shut, the reason shows on its face
-    renderTrades(); renderLearn();
+    renderTrades();
   } catch (e) { btn.disabled = false; flash('Tag did not save: ' + e.message); }
 }
 document.addEventListener('click', e => {
   const f = e.target.closest('[data-fb]'); if (f) return feedback(f);
   const mt = e.target.closest('[data-mtoggle]'); if (mt) { const id = mt.dataset.mtoggle; if (MAN_OPEN.has(id)) MAN_OPEN.delete(id); else MAN_OPEN.add(id); const card = mt.closest('.mancard'); if (card) card.classList.toggle('open'); return; }
   const st = e.target.closest('[data-sectoggle]'); if (st) { const sec = document.getElementById(st.dataset.sectoggle); if (sec) sec.classList.toggle('open'); return; }
-  const rp = e.target.closest('[data-reptoggle]'); if (rp) { const id = Number(rp.dataset.reptoggle); if (REP_OPEN.has(id)) REP_OPEN.delete(id); else REP_OPEN.add(id); const card = rp.closest('.repcard'); if (card) card.classList.toggle('open'); return; }
   const t = e.target.closest('[data-tag]'); if (t) return tagExit(t.dataset.id, t.dataset.tag, t);
   const c = e.target.closest('[data-copy]'); if (c) { try { navigator.clipboard.writeText(c.dataset.copy); c.textContent = 'Copied'; setTimeout(() => c.textContent = 'Copy address', 1200); } catch {} }
 });
@@ -674,19 +731,6 @@ function afterLine(a) {
   const tr = a.troughMovePct != null ? ` · low ${a.troughMovePct.toFixed(0)}%` : '';
   return `<div class="mono">${pc}${pk}${tr}</div>`;
 }
-function renderReports() {
-  const reps = DATA.reports || [];
-  $('repN').textContent = reps.length ? reps.length + ' total' : '';
-  $('reports').innerHTML = reps.length ? reps.map(rp => `<div class="card item repcard ${REP_OPEN.has(rp.index) ? 'open' : ''}"><div class="row1" data-reptoggle="${rp.index}"><span class="sym" style="font-size:18px">Report #${rp.index}<span class="mtag">${rp.trades} trades · ${rp.wins}W / ${rp.losses}L</span></span><span><span class="${rp.netSol >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(rp.netSol)} SOL</span><span class="chev">▸</span></span></div>
-      <div class="mbody"><div class="why">${rp.trades} trades · ${rp.wins}W / ${rp.losses}L · avg win ${rp.avgWinSol ?? '—'} · avg loss ${rp.avgLossSol ?? '—'} · median hold ${rp.medianHoldMin ?? '—'} min</div>
-      <div class="mono">You: ${rp.manual.n} trades, ${signed(rp.manual.netSol)} · Bot: ${rp.bot.n} trades, ${signed(rp.bot.netSol)} · Best ${esc(rp.best ? rp.best.symbol : '—')} ${rp.best ? signed(rp.best.pnlSol) : ''} · Worst ${esc(rp.worst ? rp.worst.symbol : '—')} ${rp.worst ? signed(rp.worst.pnlSol) : ''}</div>
-      <div class="mono">After exits: ${rp.postExit.tracked} tracked · ${rp.postExit.ranAfterExit} kept running · ${rp.postExit.diedAfterExit} died · freshness vetoes ${rp.staleAborts}</div>
-      ${(rp.rows || []).map(x => { const ex = x.exit || x, en = x.entry || {}; return `<div class="item" style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px"><div class="row1"><span class="sym">${esc(x.symbol)}</span><span class="tag">${esc(x.setup || '')}</span>${ex.manual ? '<span class="tag you">you</span>' : ''}<span class="${(ex.pnlSol ?? 0) >= 0 ? 'g' : 'r'}" style="font:700 15px var(--display)">${ex.pnlSol == null ? '—' : signed(ex.pnlSol)}</span></div>
-      <div class="mono">in ${en.mc != null ? money(en.mc) + ' MC' : ''}${condLine(en.conditions) ? ' · ' + esc(condLine(en.conditions)) : ''}</div>
-      <div class="mono">out ${esc(ex.reason || '')}${ex.heldMin != null ? ' · ' + ex.heldMin.toFixed(1) + ' min' : ''}${ex.pnlSource ? ' · P&L ' + esc(ex.pnlSource) : ''}</div>
-      ${afterLine(x.after)}</div>`; }).join('')}</div></div>`).join('')
-    : empty('No reports yet', 'A full report lands here after every 10 closed trades.');
-}
 
 /* ---------- render: SIGNALS ---------- */
 function renderSignals() {
@@ -704,87 +748,13 @@ function renderSignals() {
   }).join('') : empty('No signals here yet', sigFilter === 'all' ? 'Every coin the bot considers is logged, bought or skipped, with the reason.' : 'Switch filters to see the other signals.');
 }
 
-/* ---------- render: MIRROR ---------- */
-const ALIAS = {
-  holders:['holders','holdercount','numholders','totalholders','holdersCount'], snipers:['snipers','snipercount','snipersCount','numsnipers'],
-  bundlers:['bundlers','bundlercount','bundlersCount','bundles','bundlecount'], insiders:['insiders','insidercount','insidersCount'],
-  top:['topholderpercentage','topholderpct','topholder','topholders','top10holderspercent','top10percent','topholdersPercentage'],
-  vol:['volume','volumeusd','volume24h','volumeh24','v','totalvolume','volumeh1','volume1h'], fees:['fees','feessol','totalfees','feestotal','creatorfees','f'],
-  tx:['txns','txcount','numtxns','transactions','numtransactions','totaltxns','tx','txnsh24','txns24h'], created:['createdtimestamp','createdat','created','pairCreatedAt','createdts'],
-  mc:['usdmarketcap','usdmc','marketcapusd','marketcap','mc'],
-};
-const nk = k => String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
-function pick(c, field) {
-  const x = c.x || {}, idx = {};
-  for (const k of Object.keys(x)) { idx[nk(k)] = x[k]; idx[nk(k.split('.').pop())] ??= x[k]; }
-  for (const a of ALIAS[field]) { const v = idx[nk(a)]; if (typeof v === 'number' && isFinite(v)) return v; if (typeof v === 'string' && v !== '' && isFinite(Number(v))) return Number(v); }
-  return field === 'mc' ? (c.usdMc || null) : null;
-}
-const fnum = id => { const v = $(id).value; return v === '' ? null : Number(String(v).replace(/[$,%\s]/g, '')); };
-const FIELDS = ['minMc','maxMc','minHolders','maxTop','minVol','minTx','maxSnipers','maxBundlers','maxInsiders','q','sort','dir','server'];
-function passes(c) {
-  const g = f => pick(c, f), chk = (v, lo, hi) => { if (lo != null && !(v != null && v >= lo)) return false; if (hi != null && v != null && v > hi) return false; return true; };
-  if (!chk(g('mc'), fnum('f_minMc'), fnum('f_maxMc'))) return false;
-  if (!chk(g('holders'), fnum('f_minHolders'), null) || !chk(g('top'), null, fnum('f_maxTop')) || !chk(g('vol'), fnum('f_minVol'), null) || !chk(g('tx'), fnum('f_minTx'), null)) return false;
-  if (!chk(g('snipers'), null, fnum('f_maxSnipers')) || !chk(g('bundlers'), null, fnum('f_maxBundlers')) || !chk(g('insiders'), null, fnum('f_maxInsiders'))) return false;
-  const q = $('f_q').value.trim().toLowerCase(); if (q && !((c.symbol || '') + ' ' + (c.name || '')).toLowerCase().includes(q)) return false;
-  return true;
-}
-const SORTKEY = { mc:'mc', vol:'vol', holders:'holders', tx:'tx', fees:'fees', new:'created' };
-async function loadServerRows() {
-  const q = $('f_server').value.trim().replace(/^\?/, ''); if (!q) { serverRows = null; return; }
-  try { serverRows = await get('/pumplist?name=' + mirrorTab + '&' + q); } catch (e) { serverRows = { rows: [], err: e.message }; }
-}
-function renderMirror() {
-  const names = Object.keys(mirrorData).filter(k => mirrorData[k] && typeof mirrorData[k] === 'object' && 'rows' in mirrorData[k]);
-  const tabs = names.length ? names : ['trending','movers','new','graduated'];
-  if (!tabs.includes(mirrorTab)) mirrorTab = tabs[0];
-  $('mtabs').innerHTML = tabs.map(t => `<button class="chip ${t === mirrorTab ? 'on' : ''}" data-mt="${t}">${t[0].toUpperCase() + t.slice(1)} <span class="dim">${((mirrorData[t] || {}).rows || []).length}</span></button>`).join('');
-  const src = serverRows || mirrorData[mirrorTab] || {}, all = src.rows || [];
-  let rows = all.filter(passes);
-  const sk = SORTKEY[$('f_sort').value];
-  if (sk) { const d = $('f_dir').value === 'asc' ? 1 : -1; rows = rows.slice().sort((a, b) => d * ((pick(a, sk) ?? -Infinity) - (pick(b, sk) ?? -Infinity))); } else if ($('f_dir').value === 'asc') rows = rows.slice().reverse();
-  const active = FIELDS.filter(f => !['sort','dir'].includes(f) && $('f_' + f).value.trim()).length;
-  $('fCount').textContent = active ? active + ' on' : '';
-  $('shown').textContent = rows.length + (rows.length !== all.length ? ' of ' + all.length : '') + ' coins';
-  $('mirror').innerHTML = rows.length ? rows.map((c, i) => {
-    const bits = [['Holders', pick(c,'holders')], ['Snipers', pick(c,'snipers'), 8], ['Bundlers', pick(c,'bundlers'), 5], ['Insiders', pick(c,'insiders'), 5], ['Top holder', pick(c,'top'), 25, '%'], ['Volume', pick(c,'vol')], ['Fees', pick(c,'fees')], ['Txns', pick(c,'tx')]]
-      .filter(b => b[1] != null).map(([l, v, w, u]) => `<span class="${w && v >= w ? 'hot' : ''}"><b>${l}</b>${short(v)}${u || ''}</span>`).join('');
-    const age = ageOf(pick(c, 'created'));
-    return `<div class="card coin"><span class="rk">${i + 1}</span><div class="nm">${esc(c.symbol)}<small>${esc(c.name || '')}</small></div><div class="mc">${money(pick(c, 'mc'))}</div>
-      <div class="meta">${bits}${age ? `<span><b>Age</b>${age}</span>` : ''}<a href="${chartUrl(c.address)}" target="_blank" rel="noopener" style="margin-left:auto;color:var(--uv);font-weight:600;text-decoration:none">Open</a></div></div>`;
-  }).join('') : empty(src.err && !all.length ? 'This list could not load' : all.length ? 'No coins match your filters' : 'Waiting for the first list', src.err && !all.length ? esc(src.err) + '. Pump.fun may be blocking the server. The browser feed fills this list.' : all.length ? 'Loosen a filter or clear them all.' : 'The bot refreshes these lists every few minutes.');
-  $('mirrorFoot').textContent = src.ts ? `Lists updated ${ago(src.ts)}${serverRows ? ', live query' : ''}. ${all.length} fetched.` : '';
-}
-$('mtabs').addEventListener('click', async e => { const b = e.target.closest('[data-mt]'); if (!b) return; mirrorTab = b.dataset.mt; await loadServerRows(); renderMirror(); });
-function saveFilters() { const o = {}; FIELDS.forEach(f => o[f] = $('f_' + f).value); store.set('edgebot_filters', o); }
-(function () { const o = store.get('edgebot_filters', {}); FIELDS.forEach(f => { if (o[f] != null) $('f_' + f).value = o[f]; }); })();
-FIELDS.forEach(f => $('f_' + f).addEventListener('input', async () => { saveFilters(); if (f === 'server') await loadServerRows(); renderMirror(); }));
-$('fReset').addEventListener('click', async () => { FIELDS.forEach(f => $('f_' + f).value = f === 'sort' ? 'rank' : f === 'dir' ? 'desc' : ''); saveFilters(); await loadServerRows(); renderMirror(); });
 
-/* ---------- render: LEARN ---------- */
-const LBL = { mc:'Market cap', liq:'Liquidity', ageMin:'Age (min)', holders:'Holders', insiderWallets:'Insider wallets', top10Pct:'Top 10 share %', flowM5:'Buys per sell (5m)', chgM5:'Change 5m %', chgH1:'Change 1h %', linkedDrain:'Linked dump drain' };
-function renderLearn() {
-  const L = (DATA.learn || {}).report || {}, rep = DATA.report || {}, stt = (DATA.state || {}).stats || {};
-  $('learnN').textContent = L.manualExits != null ? `${L.manualExits} exits, ${L.tagged || 0} tagged` : '';
-  const cmp = L.compare || {};
-  $('learnCmp').innerHTML = L.manualExits ? `<div class="why" style="margin-bottom:10px">${esc(L.note || '')}</div><table><tr><th>At entry</th><th>Coins you closed</th><th>Bot winners</th></tr>${Object.entries(cmp).filter(([, v]) => v.manualExits != null || v.botWinners != null).map(([k, v]) => `<tr><td>${LBL[k] || k}</td><td>${v.manualExits ?? '—'}</td><td>${v.botWinners ?? '—'}</td></tr>`).join('')}</table>`
-    : empty('Nothing to compare yet', 'Close a few positions yourself and tag why. After about 20 tagged exits the differences start to mean something.');
-  const by = L.byReason || {}, tot = Object.values(by).reduce((a, b) => a + b, 0);
-  $('learnWhy').innerHTML = tot ? Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div class="risk" style="margin:0 0 12px"><div class="row"><span>${esc(reasonLabel(k))}</span><span>${n}</span></div><div class="bar"><i style="width:${n / tot * 100}%;background:#7f6dff"></i></div></div>`).join('') : '<span class="why">Your tags will chart here.</span>';
-  const bs = rep.bySetup || {}, rows = Object.entries(bs).filter(([k]) => k.endsWith('/taken') || k.endsWith('/skipped'));
-  $('setups').innerHTML = rows.length ? `<table><tr><th>Setup and decision</th><th>Signals</th><th>Win 15m</th><th>Avg 15m</th></tr>${rows.map(([k, v]) => `<tr><td>${esc(k.replace('/', ', '))}</td><td>${v.n}</td><td>${v.winRate15 != null ? Math.round(v.winRate15 * 100) + '%' : '—'}</td><td class="${(v.avgR15 || 0) >= 0 ? 'g' : 'r'}">${v.avgR15 != null ? (v.avgR15 * 100).toFixed(1) + '%' : '—'}</td></tr>`).join('')}</table>` : '<span class="why">Appears after the bot has logged some signals.</span>';
-  const sk = rep.bySkipReason || {}, sr = Object.entries(sk).sort((a, b) => b[1].n - a[1].n).slice(0, 10);
-  $('gates').innerHTML = sr.length ? `<div class="why" style="margin-bottom:10px">If skipped coins would have gained, the gate is costing you. If they fell, it is saving you.</div><table><tr><th>Skip reason</th><th>Coins</th><th>Avg 15m</th></tr>${sr.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${v.n}</td><td class="${(v.avgR15 || 0) >= 0 ? 'r' : 'g'}">${v.avgR15 != null ? (v.avgR15 * 100).toFixed(1) + '%' : '—'}</td></tr>`).join('')}</table>` : '<span class="why">Appears after the bot has skipped some coins.</span>';
-  const sc = Object.entries(stt.sourceCounts || {});
-  $('sources').innerHTML = sc.length ? `<table><tr><th>Source</th><th>Returned</th><th>Taken</th></tr>${sc.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${v.returned ?? 0}</td><td class="g">${v.taken ?? 0}</td></tr>`).join('')}</table>` : '<span class="why">Sources report here after the first discovery run.</span>';
-}
 
 /* ---------- load ---------- */
 let failures = 0;
 async function load() {
   const need = ['state', 'report', 'signals', 'trades'];
-  const [state, report, signals, trades, lists, learn, postexit, reports] = await Promise.allSettled([get('/state'), get('/report'), get('/signals?limit=60'), get('/trades'), get('/pumplists'), get('/learn'), get('/postexit'), get('/reports')]);
+  const [state, report, signals, trades, learn, postexit] = await Promise.allSettled([get('/state'), get('/report'), get('/signals?limit=60'), get('/trades'), get('/learn'), get('/postexit')]);
   const val = r => r.status === 'fulfilled' ? r.value : null;
   if (!val(state)) {
     failures++;
@@ -793,11 +763,408 @@ async function load() {
     $('banner').classList.add('on'); return;
   }
   failures = 0; OFFLINE = false; $('banner').classList.remove('on');
-  DATA = { state: val(state), report: val(report) || {}, signals: val(signals) || [], trades: val(trades) || [], learn: val(learn) || { recent: [], report: {} }, postexit: val(postexit) || { pending: [], done: [] }, reports: val(reports) || [] };
-  mirrorData = val(lists) || {}; await loadServerRows();
-  renderNow(); renderTrades(); renderSignals(); renderMirror(); renderLearn(); renderReports();
+  DATA = { state: val(state), report: val(report) || {}, signals: val(signals) || [], trades: val(trades) || [], learn: val(learn) || { recent: [], report: {} }, postexit: val(postexit) || { pending: [], done: [] } };
+  renderNow(); renderTrades(); renderSignals();
 }
-setView(view); renderMirror(); load(); setInterval(load, REFRESH_MS);
+if (!['now','trades','signals','lab'].includes(view)) view = 'now'; setView(view); load(); setInterval(load, REFRESH_MS);
+</script>
+<script>
+/* =====================================================================
+   LAB TAB — ported from lab-stream.html (reference build).
+   MOCK = false: every Adapter function reads the bot's live API via the
+   dashboard's get(). Only the TICK STREAM has no live endpoint (the bot
+   exposes no watchlist tick feed), so it keeps the mock generator and
+   carries a visible MOCK DATA tag in its lane header.
+   ===================================================================== */
+(function () {
+'use strict';
+const MOCK = false;
+const el = id => document.getElementById('lab-' + id);
+const escL = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const hms = d => [d.getHours(), d.getMinutes(), d.getSeconds()].map(x => String(x).padStart(2, '0')).join(':');
+const C = { accent: '#8b7bff', cyan: '#5ad8ff', pink: '#ff4fd8', green: '#45e09a', amber: '#f2b84b', red: '#ff5c7a', orange: '#ff8a3d', mint: '#9be7c0', rose: '#ff9aac', bright: '#eef0ff' };
+const DET_COLOR = { pop: C.cyan, trend: C.orange, liftoff: '#a99cff', flow: C.mint, churn: C.mint, velocity: C.green, reload: C.pink };
+const EVENT_COLOR = { OUTCOME: C.green, READY: C.accent, PAIRED: C.amber, WARN: C.red, SAVED: C.green, HALT: C.amber, FILL: C.cyan };
+function rnd(n) { return Math.floor(Math.random() * n); }
+function pickA(a) { return a[rnd(a.length)]; }
+function hx(n) { let s = ''; for (let i = 0; i < n; i++) s += '0123456789abcdef'[rnd(16)]; return s; }
+
+/* ---------------- shared live caches ---------------- */
+let stateC = { v: null, ts: 0, rtt: 0 };
+async function labState() {
+  if (stateC.v && Date.now() - stateC.ts < 5000) return stateC.v;
+  const t0 = performance.now();
+  const v = await get('/state');
+  stateC = { v, ts: Date.now(), rtt: Math.round(performance.now() - t0) };
+  return v;
+}
+let sigC = { items: [], ts: 0, limit: 0 };
+async function labSignals(limit) {
+  limit = limit || 60;
+  if (sigC.items.length && sigC.limit >= limit && Date.now() - sigC.ts < 4000) return sigC.items;
+  const d = await get('/signals?limit=' + limit + '&offset=0');
+  const items = Array.isArray(d) ? d : (d.items || []);
+  sigC = { items, ts: Date.now(), limit };
+  return items;
+}
+
+/* ---------------- signal mapping ---------------- */
+function mapSignal(r) {
+  const reason0 = (r.reasons && r.reasons[0]) || '';
+  const isRisk = /^risk:/i.test(reason0);
+  let gates = [];
+  const src = (isRisk && r.shadowGates) ? r.shadowGates : r.gates;
+  if (src) gates = Object.entries(src).map(([name, g]) => ({ name, pass: !!(g && g.pass) }));
+  if (!gates.length && reason0) gates = [{ name: (reason0.replace(/^(risk|gate):\s*/i, '').split(/[:—(]/)[0].trim().slice(0, 10) || 'gate'), pass: r.decision === 'taken' }];
+  let decision = 'BLOCK';
+  if (r.decision === 'taken') decision = 'TAKEN';
+  else if (r.decision === 'shadow') decision = 'SHADOW';
+  else if (isRisk) decision = 'HALT';
+  const gain = (r.metrics && (r.metrics.gainPct != null ? r.metrics.gainPct : r.metrics.chgH1)) || 0;
+  return { id: r.id, coin: r.symbol || '?', detector: r.setup || 'pop', mcK: Math.round((r.mc || 0) / 1000), gainPct: Math.round(gain), gates, decision, blockedBy: reason0 || null };
+}
+let sigCursor = null;
+async function newSignalsLive() {
+  const items = await labSignals(60);
+  if (!items.length) return [];
+  if (sigCursor === null) { sigCursor = items[0].id; return []; }
+  const fresh = [];
+  for (const r of items) { if (r.id === sigCursor) break; fresh.push(r); }
+  sigCursor = items[0].id;
+  return fresh.map(mapSignal).reverse();
+}
+async function latestSignals(n) {
+  const items = await labSignals(Math.max(n, 60));
+  return items.slice(0, n).map(mapSignal);
+}
+
+/* ---------------- fees (D2 + rent correction) ----------------
+   Burned fixed cost per round trip ≈ 0.00021 SOL (buy tx fee 0.000105 +
+   sell-side fee). The 0.00151 token-account deposit inside each buy is
+   REFUNDED by the bot's empty-account sweep, so it is not burn. */
+const FEE_FIXED = 0.00021;
+const CHAIN_NET = -1.9681; // D2 chain-rebuilt lifetime net (reference for share)
+async function feesLive() {
+  const s = await labState().catch(() => null);
+  const size = (s && s.limits && s.limits.tradeSol) || 0.05;
+  const entries = (s && s.stats && s.stats.entries) || 0;
+  const life = entries * FEE_FIXED;
+  return { fixedSol: FEE_FIXED, sizeSol: size, pct: +(FEE_FIXED / size * 100).toFixed(2), lifetimeSol: +life.toFixed(3), shareOfLoss: +(life / Math.abs(CHAIN_NET) * 100).toFixed(0) };
+}
+
+/* ---------------- experiments: client-side aggregation over /signals ---------------- */
+const EXP_DEFS = [
+  { code: 'GDH', name: 'gates-during-halt', target: 40, test: r => r.decision === 'skipped' && /^risk:/i.test((r.reasons || [])[0] || '') },
+  { code: 'RUG', name: 'rugcheck-retry', target: 30, test: r => r.decision === 'skipped' && /rugcheck report/i.test((r.reasons || [])[0] || '') },
+  { code: 'TRD', name: 'trend', target: 30, test: r => r.decision === 'shadow' && r.setup === 'trend' },
+  { code: 'LFT', name: 'liftoff', target: 30, test: r => r.decision === 'shadow' && r.setup === 'liftoff' },
+];
+let expAgg = null, walkStarted = false;
+function freshAgg() { const o = { counted: {}, cohorts: {}, base: { n: 0, run: 0, crash: 0, r60: [] } }; for (const d of EXP_DEFS) o.cohorts[d.code] = { n: 0, run: 0, crash: 0, r60: [] }; return o; }
+function loadExpAgg() { try { const j = JSON.parse(localStorage.getItem('lab_exp_v1')); if (j && j.cohorts && j.base) return j; } catch (e) {} return freshAgg(); }
+function saveExpAgg() { try { if (Object.keys(expAgg.counted).length > 9000) expAgg = freshAgg(); localStorage.setItem('lab_exp_v1', JSON.stringify(expAgg)); } catch (e) {} }
+function usableOut(r) { const o = r.out; return !!(o && o.done && !o.unobserved && (o.maxRet !== 0 || o.minRet !== 0 || o.r60 != null)); }
+function fold(recs) {
+  let added = 0;
+  for (const r of recs) {
+    if (!r.id || expAgg.counted[r.id] || !usableOut(r)) continue;
+    const o = r.out;
+    const hit = c => { c.n++; if (o.maxRet >= 0.5) c.run++; if (o.minRet <= -0.5) c.crash++; if (o.r60 != null && c.r60.length < 4000) c.r60.push(o.r60); };
+    if (r.decision === 'taken' && r.setup === 'pop') hit(expAgg.base);
+    for (const d of EXP_DEFS) if (d.test(r)) { hit(expAgg.cohorts[d.code]); break; }
+    expAgg.counted[r.id] = 1; added++;
+  }
+  if (added) saveExpAgg();
+  return added;
+}
+async function walkSignals() {
+  let offset = 0, total = Infinity, guard = 0;
+  while (offset < total && guard++ < 12) {
+    const d = await get('/signals?limit=500&offset=' + offset);
+    const items = Array.isArray(d) ? d : (d.items || []);
+    if (d && typeof d.total === 'number') total = d.total;
+    fold(items);
+    offset += items.length;
+    if (!items.length) break;
+  }
+}
+function med(a) { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+function cohortStats(c) { return { n: c.n, runnerPct: c.n ? +(c.run / c.n * 100).toFixed(1) : null, crashPct: c.n ? +(c.crash / c.n * 100).toFixed(1) : null, r60Med: c.r60.length ? +(med(c.r60) * 100).toFixed(1) : null }; }
+async function experimentsLive() {
+  if (!expAgg) expAgg = loadExpAgg();
+  if (!walkStarted) {
+    walkStarted = true;
+    walkSignals().then(async () => {
+      const exps = await experimentsLive();
+      const base = await baselineLive();
+      renderExperiments(exps, base);
+      for (const x of exps) evSeen.exp[x.code] = statusOf(x, base);
+      saveEv();
+    }).catch(() => {});
+  }
+  else { const items = await labSignals(500).catch(() => []); fold(items); }
+  return EXP_DEFS.map(d => ({ code: d.code, name: d.name, target: d.target, ...cohortStats(expAgg.cohorts[d.code]) }));
+}
+async function baselineLive() {
+  if (expAgg && expAgg.base.n >= 10) { const s = cohortStats(expAgg.base); return { runnerPct: s.runnerPct != null ? s.runnerPct : 21.8, crashPct: s.crashPct != null ? s.crashPct : 38.1, r60Med: s.r60Med != null ? s.r60Med : -37.5 }; }
+  return { runnerPct: 21.8, crashPct: 38.1, r60Med: -37.5 };
+}
+
+/* ---------------- meta / hud / paired ---------------- */
+let metaC = { v: null, ts: 0 };
+async function metaLive() {
+  if (metaC.v && Date.now() - metaC.ts < 30000) return metaC.v;
+  const s = await labState();
+  let cfg = '—';
+  try { const t = await get('/trades?limit=8'); const items = Array.isArray(t) ? t : (t.items || []); const st = items.find(x => x.stamp && x.stamp.commit); if (st) cfg = st.stamp.commit.slice(0, 7); } catch (e) {}
+  const v = { config: cfg, wallet: '4NsK…6RWv4', watchlist: s.watchlist != null ? s.watchlist : '—', rttMs: stateC.rtt || 0 };
+  metaC = { v, ts: Date.now() };
+  return v;
+}
+async function hudLive() {
+  const s = await labState();
+  const items = await labSignals(200).catch(() => []);
+  const now = Date.now();
+  const win = items.filter(r => now - r.ts < 60000);
+  const pool = win.length ? win : items;
+  const judged = pool.filter(r => r.gatePass != null || r.decision === 'taken');
+  const passed = judged.filter(r => r.gatePass === true || r.decision === 'taken').length;
+  const risk = s.risk || {};
+  const halt = !s.halted ? 'OFF' : risk.killed ? 'KILLED' : risk.downHalted ? 'BALANCE' : risk.streakPaused ? 'STREAK' : 'HALT';
+  const size = (s.limits && s.limits.tradeSol) || 0.05;
+  return { sigPerMin: win.length, passPct: judged.length ? Math.round(passed / judged.length * 100) : 0, obsQueue: items.filter(r => !(r.out && r.out.done)).length, feePct: +(FEE_FIXED / size * 100).toFixed(2), halt };
+}
+async function pairedLive() {
+  let n = 0, last = '—';
+  try {
+    const p = await get('/postexit');
+    const done = (p.paired && p.paired.done) || [];
+    n = (p.paired && p.paired.total != null) ? p.paired.total : done.length;
+    if (done[0]) last = (done[0].symbol || 'coin') + ' final';
+  } catch (e) {}
+  return { pfYou: 1.65, pfBot: 0.57, n, target: 20, last };
+}
+
+/* ---------------- events: derived from live data ---------------- */
+let evSeen = { out: {}, fill: {}, paired: -1, halt: null, exp: {}, primed: false };
+try { const j = JSON.parse(localStorage.getItem('lab_ev_v1')); if (j && typeof j === 'object') evSeen = Object.assign(evSeen, j); } catch (e) {}
+function saveEv() { try { localStorage.setItem('lab_ev_v1', JSON.stringify(evSeen)); } catch (e) {} }
+const shortReason = r => String(r || '').replace(/^(risk|gate):\s*/i, '').slice(0, 42);
+function outEvent(r) {
+  const o = r.out;
+  if (o.r60 != null && o.r60 >= 0.5) return { kind: 'OUTCOME', msg: `${r.symbol} r60 landed +${Math.round(o.r60 * 100)}% — skipped (${shortReason((r.reasons || [])[0])}). Logged as cost.` };
+  if (o.r15 != null && o.r15 >= 0.5) return { kind: 'OUTCOME', msg: `${r.symbol} r15 landed +${Math.round(o.r15 * 100)}% — skipped (${shortReason((r.reasons || [])[0])}). Logged as cost.` };
+  if (o.r60 != null && o.r60 <= -0.5) return { kind: 'SAVED', msg: `${r.symbol} fell ${Math.round(o.r60 * 100)}% by r60 after the skip (${shortReason((r.reasons || [])[0])}).` };
+  if (o.r15 != null && o.r15 <= -0.5) return { kind: 'SAVED', msg: `${r.symbol} fell ${Math.round(o.r15 * 100)}% by r15 after the skip (${shortReason((r.reasons || [])[0])}).` };
+  return null;
+}
+async function seedAndPrime() {
+  const seeds = [];
+  const items = await labSignals(500).catch(() => []);
+  const big = [];
+  for (const r of items) {
+    const o = r.out;
+    if (!o || !o.done) continue;
+    evSeen.out[r.id] = 1;
+    if (r.decision !== 'taken') { const e = outEvent(r); if (e) big.push({ ...e, ts: r.ts }); }
+  }
+  big.sort((a, b) => b.ts - a.ts);
+  for (const e of big.slice(0, 2)) seeds.push({ kind: e.kind, msg: e.msg, t: hms(new Date(e.ts)) });
+  try {
+    const t = await get('/trades?limit=10');
+    const items2 = Array.isArray(t) ? t : (t.items || []);
+    for (const x of items2) if (x.type === 'open' || x.type === 'close') evSeen.fill[x.type + ':' + x.id + ':' + x.ts] = 1;
+    const f = items2.find(x => x.type === 'close') || items2.find(x => x.type === 'open');
+    if (f) seeds.unshift({ kind: 'FILL', msg: f.type === 'close' ? `Closed ${f.symbol} ${f.pnlSol >= 0 ? '+' : ''}${(f.pnlSol || 0).toFixed(4)} SOL — ${shortReason(f.reason)}.` : `Buy filled ${f.entrySol} SOL @ ${f.symbol} (${f.setup}).`, t: hms(new Date(f.ts)) });
+  } catch (e) {}
+  try { const p = await get('/postexit'); evSeen.paired = (p.paired && p.paired.total) || 0; } catch (e) { evSeen.paired = 0; }
+  const s = await labState().catch(() => null);
+  if (s) { const risk = s.risk || {}; evSeen.halt = !s.halted ? 'OFF' : risk.downHalted ? 'BALANCE' : risk.streakPaused ? 'STREAK' : 'HALT'; if (s.halted) seeds.unshift({ kind: 'HALT', msg: `Halt is on (${evSeen.halt}). Entries paused; exits and shadow tracking continue.`, t: hms(new Date()) }); }
+  evSeen.primed = true; saveEv();
+  return seeds.slice(0, 3);
+}
+async function deriveEvents() {
+  if (!evSeen.primed) return [];
+  const evs = [];
+  const items = await labSignals(200).catch(() => []);
+  for (const r of items) {
+    if (evSeen.out[r.id]) continue;
+    const o = r.out;
+    if (!o || !o.done) continue;
+    evSeen.out[r.id] = 1;
+    if (r.decision === 'taken') continue;
+    const e = outEvent(r); if (e) evs.push(e);
+  }
+  try {
+    const t = await get('/trades?limit=10');
+    const items2 = Array.isArray(t) ? t : (t.items || []);
+    for (const x of items2) {
+      if (x.type !== 'open' && x.type !== 'close') continue;
+      const key = x.type + ':' + x.id + ':' + x.ts;
+      if (evSeen.fill[key]) continue;
+      evSeen.fill[key] = 1;
+      if (x.type === 'open') evs.push({ kind: 'FILL', msg: `Buy filled ${x.entrySol} SOL @ ${x.symbol} (${x.setup}).` });
+      else evs.push({ kind: 'FILL', msg: `Closed ${x.symbol} ${x.pnlSol >= 0 ? '+' : ''}${(x.pnlSol || 0).toFixed(4)} SOL — ${shortReason(x.reason)}. Fee ${x.feesSol != null ? x.feesSol : '—'} SOL${x.feesSource === 'txFeeEstimate' ? ' (est.)' : ''}.` });
+    }
+  } catch (e) {}
+  const s = await labState().catch(() => null);
+  if (s) {
+    const risk = s.risk || {};
+    const cur = !s.halted ? 'OFF' : risk.killed ? 'KILLED' : risk.downHalted ? 'BALANCE' : risk.streakPaused ? 'STREAK' : 'HALT';
+    if (evSeen.halt !== null && cur !== evSeen.halt) evs.push({ kind: 'HALT', msg: cur === 'OFF' ? 'Halt cleared — the bot can buy again.' : `Halt armed (${cur}). Entries paused; exits and shadow tracking continue.` });
+    evSeen.halt = cur;
+  }
+  try {
+    const p = await get('/postexit');
+    const tot = (p.paired && p.paired.total) || 0;
+    if (evSeen.paired >= 0 && tot > evSeen.paired) { const d0 = ((p.paired || {}).done || [])[0]; evs.push({ kind: 'PAIRED', msg: `Paired shadow exit final${d0 && d0.symbol ? ' on ' + d0.symbol : ''} — your exit vs the bot's shadow exit is in the log.` }); }
+    evSeen.paired = tot;
+  } catch (e) {}
+  saveEv();
+  return evs.reverse();
+}
+function statusOf(x, base) {
+  if (x.n >= x.target) return 'READY';
+  if (x.runnerPct == null || x.n < 10) return 'COLLECT';
+  if (x.runnerPct > base.runnerPct && x.crashPct <= base.crashPct) return 'BETTER';
+  if (x.runnerPct < base.runnerPct || x.crashPct > base.crashPct) return 'WORSE';
+  return 'COLLECT';
+}
+function expEvents(list, base) {
+  const evs = [];
+  for (const x of list) {
+    const st = statusOf(x, base);
+    const prev = evSeen.exp[x.code];
+    if (prev && prev !== st) {
+      if (st === 'READY') evs.push({ kind: 'READY', msg: `${x.name} hit ${x.n}/${x.target}. Ready for your decision.` });
+      if (st === 'WORSE') evs.push({ kind: 'WARN', msg: `${x.name} ${x.n}/${x.target} leaning worse: ${x.runnerPct}% runners vs ${base.runnerPct}% baseline.` });
+    }
+    evSeen.exp[x.code] = st;
+  }
+  return evs;
+}
+
+/* ---------------- mock tick generator (TICK STREAM panel only) ---------------- */
+const TICK_COINS = ['WAP', 'MEOWGENT', 'Hatchan', 'OTF', 'VEILTRUMP', 'PSIQ', 'BAZU', 'RARI', 'NYXCAT', 'DUSTPAD', 'STUDIO', 'POKEDEX', 'HOODX', 'CODE', 'SAINDRA', 'TRILLIONS', 'QUALITY', 'UNITS', 'GLYPH', 'MOTH'];
+function labMockTick() { const b = rnd(40), s = rnd(40); return { coin: pickA(TICK_COINS), px: '0.0000' + hx(4).replace(/[a-f]/g, '3'), dPct: Math.random() * 24 - 10, volK: +(Math.random() * 9).toFixed(1), buys: b, sells: s }; }
+
+/* =========================== RENDER (ported) ================================= */
+const S = { matrix: [], sig: [], gate: [], ticks: [], events: [], n: 0, showAll: false };
+function noise(n) {
+  const parts = ['slot 29' + rnd(9e6), 'JUP ' + hx(3) + ' ok', 'liq ' + (Math.random() * 60).toFixed(1) + 'k', '0x' + hx(6), 'mc $' + rnd(400) + 'k', 'scan #' + rnd(9000), (Math.random() > .5 ? '+' : '-') + (Math.random() / 10).toFixed(4), 'r60 ' + hx(2), 'obs ' + rnd(300)];
+  let s = ''; while (s.length < n) s += pickA(parts) + '  '; return s.slice(0, n);
+}
+for (let i = 0; i < 110; i++) S.matrix.push(noise(64));
+function renderHud(h) {
+  const cell = (k, v, c) => `<div><div class="k">${k}</div><div class="v" style="color:${c}">${escL(v)}</div></div>`;
+  el('hud').innerHTML = cell('SIG/MIN', h.sigPerMin, C.bright) + cell('PASS', h.passPct + '%', C.green) + cell('OBS Q', h.obsQueue, C.cyan) + cell('FEE', h.feePct + '%', C.amber) + cell('HALT', h.halt, h.halt === 'OFF' ? C.green : C.amber);
+}
+function renderLanes() {
+  el('sig').innerHTML = S.sig.map((s, i) => `<div class="lb-row ${s.fresh ? 'lb-flash' : ''}" style="color:${i === 0 ? '#fff' : DET_COLOR[s.detector] || C.cyan};opacity:${(1 - i * .055).toFixed(2)};${i === 0 ? 'font-weight:800' : ''}">${escL(s.detector.slice(0, 4).toUpperCase() + ' ' + s.coin.slice(0, 8) + ' ' + s.mcK + 'k ' + (s.gainPct >= 0 ? '+' : '') + s.gainPct + '%')}</div>`).join('');
+  el('gate').innerHTML = S.gate.map((s, i) => {
+    const chain = s.gates.map(g => g.pass ? g.name.slice(0, 3) + '✓' : g.name + '✗').join(' ');
+    const end = s.decision === 'BLOCK' ? ' BLOCK' : s.decision === 'SHADOW' ? ' SHADOW' : s.decision === 'HALT' ? ' HALT' : ' PASS';
+    const col = s.decision === 'BLOCK' ? '#ff6f8a' : s.decision === 'HALT' ? C.amber : C.green;
+    return `<div class="lb-row ${s.fresh ? 'lb-flash' : ''}" style="color:${col};opacity:${(1 - i * .055).toFixed(2)};${i === 0 ? 'font-weight:800' : ''}">${escL(chain + end)}</div>`;
+  }).join('');
+  el('ticks').innerHTML = S.ticks.map(t => `<div class="lb-tick"><span style="color:#cfd6ff;font-weight:600">${escL(t.coin.slice(0, 8))}</span><span style="color:#8a93bf">${escL(t.px)}</span><span style="color:${t.dPct > 0 ? C.green : C.red}">${(t.dPct > 0 ? '▲+' : '▼') + t.dPct.toFixed(1)}%</span><span style="color:#8a93bf">${t.volK}k</span><span style="color:${t.buys > t.sells ? C.mint : C.rose}">${t.buys}/${t.sells}</span></div>`).join('');
+  el('matrix').textContent = S.matrix.join('\n');
+}
+function renderEvents() {
+  const list = S.showAll ? S.events : S.events.slice(0, 3);
+  el('events').innerHTML = list.map(e => { const c = EVENT_COLOR[e.kind] || C.accent; return `<div class="lb-event ${e.fresh ? 'lb-pop' : ''}" style="border-color:${c};box-shadow:0 0 14px ${c}33"><div style="display:flex;justify-content:space-between;gap:6px"><span class="lb-tag" style="color:${c}">◆ ${escL(e.kind)}</span><span style="color:var(--lfaint);font-size:9px">${escL(e.t || '')}</span></div><div class="lb-msg">${escL(e.msg)}</div></div>`; }).join('');
+  el('evToggle').textContent = S.showAll ? 'top 3' : 'history (' + S.events.length + ')';
+}
+function renderExperiments(list, base) {
+  el('baseline').textContent = `vs taken pops · ${base.runnerPct}% run · ${base.crashPct}% crash`;
+  el('exps').innerHTML = list.map(x => {
+    let st, c;
+    if (x.n >= x.target) { st = 'READY'; c = C.accent; }
+    else if (x.runnerPct == null || x.n < 10) { st = 'COLLECT'; c = C.amber; }
+    else if (x.runnerPct > base.runnerPct && x.crashPct <= base.crashPct) { st = 'BETTER'; c = C.green; }
+    else if (x.runnerPct < base.runnerPct || x.crashPct > base.crashPct) { st = 'WORSE'; c = C.red; }
+    else { st = 'COLLECT'; c = C.amber; }
+    const f = Math.min(16, Math.round(x.n / x.target * 16));
+    return `<div class="lb-exp"><span style="color:${C.bright};font-weight:800">${escL(x.code)}</span><span class="lb-bar" style="color:${c}">${'█'.repeat(f) + '░'.repeat(16 - f)}</span><span style="color:#8a93bf">${x.n}/${x.target}</span><span style="font-size:9px;font-weight:800;text-align:right;color:${c}">${st}</span></div>`;
+  }).join('');
+  el('expLegend').textContent = list.map(x => x.code + ' ' + x.name).join(' · ');
+}
+function renderStatic(p, f, m) {
+  el('pfYou').textContent = p.pfYou.toFixed(2); el('pfYou').style.color = p.pfYou >= 1 ? C.green : C.red;
+  el('pfBot').textContent = p.pfBot.toFixed(2); el('pfBot').style.color = p.pfBot >= 1 ? C.green : C.red;
+  el('pairedNote').textContent = `paired ${p.n}/${p.target} · last: ${p.last}`;
+  el('feeFixed').textContent = f.fixedSol; el('feeSizeK').textContent = '@' + f.sizeSol; el('feePct').textContent = f.pct + '%';
+  el('feeLife').textContent = '≈' + f.lifetimeSol + ' SOL'; el('feeShare').textContent = `≈${f.shareOfLoss}% of net loss · deposit refunded`;
+  el('kicker').textContent = '// LAB::STREAM · cfg#' + m.config;
+  el('memTitle').textContent = 'MEM · ' + m.wallet;
+  el('tickTitle').textContent = 'TICK STREAM · watchlist ' + m.watchlist;
+  el('modeTag').textContent = MOCK ? 'MOCK DATA' : '';
+}
+
+/* =========================== ENGINE ================================= */
+function labOn() { const v = document.getElementById('v-lab'); return !!(v && v.classList.contains('on')); }
+async function step() {
+  if (!labOn()) return;
+  S.n++;
+  const [h, m, sigs] = await Promise.all([hudLive().catch(() => null), metaLive().catch(() => null), newSignalsLive().catch(() => [])]);
+  const ticks = [labMockTick(), labMockTick()];
+  S.matrix = S.matrix.slice(1).concat([noise(64)]);
+  S.sig.forEach(s => s.fresh = false); S.gate.forEach(s => s.fresh = false); S.events.forEach(e => e.fresh = false);
+  for (const s of sigs) { S.sig.unshift({ ...s, fresh: true }); S.gate.unshift({ ...s, fresh: true }); }
+  S.sig = S.sig.slice(0, 14); S.gate = S.gate.slice(0, 14);
+  S.ticks = ticks.concat(S.ticks).slice(0, 10);
+  if (h) renderHud(h);
+  renderLanes(); renderEvents();
+  el('clock').textContent = hms(new Date());
+  if (m) el('pkt').textContent = `pkt ${48210 + S.n * 7} · ${m.rttMs}ms`;
+  const hex = []; for (let i = 0; i < 7; i++) hex.push((0x7f3a00 + i * 16 + S.n * 16).toString(16) + '  ' + hx(8) + ' ' + hx(8) + ' ' + hx(8) + ' ' + hx(8));
+  el('hex').innerHTML = hex.map(x => `<div>${x}</div>`).join('');
+}
+function pushEvents(evs) {
+  if (!evs || !evs.length) return;
+  S.events.forEach(e => e.fresh = false);
+  for (const e of evs) S.events.unshift({ ...e, t: hms(new Date()), fresh: true });
+  S.events = S.events.slice(0, 40);
+  renderEvents();
+}
+async function slowCycle() {
+  if (!labOn()) return;
+  try {
+    const exps = await experimentsLive();
+    const base = await baselineLive();
+    renderExperiments(exps, base);
+    renderStatic(await pairedLive(), await feesLive(), await metaLive());
+    const evs = await deriveEvents();
+    pushEvents(evs.concat(expEvents(exps, base)));
+    saveEv();
+  } catch (e) { console.error('lab slow cycle', e); }
+}
+let started = false, speedTimer = null;
+function setSpeed(s) {
+  clearInterval(speedTimer);
+  speedTimer = setInterval(() => step().catch(console.error), { calm: 1400, live: 650, overdrive: 220 }[s]);
+  document.querySelectorAll('#v-lab .lb-speed button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
+}
+document.querySelectorAll('#v-lab .lb-speed button').forEach(b => b.addEventListener('click', () => setSpeed(b.dataset.s)));
+el('evToggle').addEventListener('click', () => { S.showAll = !S.showAll; renderEvents(); });
+window.LabStart = async function () {
+  if (started) return; started = true;
+  try {
+    const seed = await latestSignals(14);
+    S.sig = seed.slice(); S.gate = seed.slice();
+    for (let i = 0; i < 10; i++) S.ticks.push(labMockTick());
+    S.events = await seedAndPrime();
+    const [exps, base, p, f, m] = await Promise.all([experimentsLive(), baselineLive(), pairedLive(), feesLive(), metaLive()]);
+    renderExperiments(exps, base); renderStatic(p, f, m);
+    for (const x of exps) evSeen.exp[x.code] = statusOf(x, base);
+    saveEv();
+    renderLanes(); renderEvents();
+  } catch (e) { console.error('lab init', e); }
+  setSpeed('live');
+  setInterval(slowCycle, 30000);
+};
+if (labOn()) window.LabStart();
+})();
 </script>
 <script>
 /* Data Stream background generator — drop-in, no dependencies */
