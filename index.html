@@ -392,7 +392,12 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
 <script>
 const API = (new URLSearchParams(location.search).get('api')) || 'https://edgebot.onrender.com';
 const REFRESH_MS = 8000;
-const REASONS = [['dev_bundle','Dev or bundle'],['stalled','Stalled'],['farm_wallets','Farm wallets'],['chart_off','Chart looked off'],['other','Other']];
+const REASONS = [['stalled','stalled'],['volume_died','volume died'],['wick','wick'],['chart_off','chart off'],['gut','gut'],['other','other']];
+// pre-2026-10-14 tags: no longer settable, still shown on old exits so history stays readable
+const LEGACY_REASONS = [['dev_bundle','Dev or bundle'],['farm_wallets','Farm wallets']];
+const reasonLabel = k => { const r = REASONS.find(x => x[0] === k) || LEGACY_REASONS.find(x => x[0] === k); return r ? r[1] : (k === 'untagged' ? 'Not tagged yet' : k); };
+// the server's live set (GET /learn → exitReasons) wins when it has loaded
+const liveReasons = () => (DATA.learn && Array.isArray(DATA.learn.exitReasons) && DATA.learn.exitReasons.length) ? DATA.learn.exitReasons.map(r => [r.key, r.label]) : REASONS;
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -634,10 +639,10 @@ function renderTrades() {
   $('manN').textContent = man.length ? `${man.filter(m => !m.reason).length} to tag` : '';
   $('manual').innerHTML = man.length ? man.map(m => {
       const real = m.pnlSol != null, pv = real ? m.pnlSol : m.pnlSolEstimate;
-      const open = MAN_OPEN.has(m.id), rlabel = m.reason ? (REASONS.find(r => r[0] === m.reason) || [])[1] : '';
+      const open = MAN_OPEN.has(m.id), rlabel = m.reason ? reasonLabel(m.reason) : '';
       return `<div class="card item mancard ${open ? 'open' : ''}"><div class="row1" data-mtoggle="${esc(m.id)}"><span class="sym" style="font-size:18px">${esc(m.symbol)}${rlabel ? `<span class="mtag">${esc(rlabel)}</span>` : ''}</span><span><span class="${(pv || 0) >= 0 ? 'g' : 'r'}" style="font:700 16px var(--display)">${signed(pv)} SOL${real ? '' : ' est.'}</span><span class="chev">▸</span></span></div>
       <div class="mbody"><div class="why">Held ${m.heldMin} min, peaked at ${(m.peakRatio || 1).toFixed(2)}x${m.bundleScore ? ', bundle risk ' + m.bundleScore : ''}${peChip(m.id)}. ${m.reason ? 'Your reason is saved.' : 'Why did you close it?'}</div>
-      <div class="chips">${REASONS.map(([k, l]) => `<button class="chip ${m.reason === k ? 'on' : ''}" data-tag="${k}" data-id="${esc(m.id)}">${l}</button>`).join('')}</div></div></div>`;
+      <div class="chips">${liveReasons().map(([k, l]) => `<button class="chip ${m.reason === k ? 'on' : ''}" data-tag="${k}" data-id="${esc(m.id)}">${l}</button>`).join('')}</div></div></div>`;
     }).join('')
     : empty('Nothing closed by hand yet', 'When you sell a position in your own wallet, it lands here within about 30 seconds. Tag why, and the bot learns what you keep exiting.');
   const closed = (DATA.trades || []).filter(t => t.type === 'close' && !t.manual);
@@ -766,7 +771,7 @@ function renderLearn() {
   $('learnCmp').innerHTML = L.manualExits ? `<div class="why" style="margin-bottom:10px">${esc(L.note || '')}</div><table><tr><th>At entry</th><th>Coins you closed</th><th>Bot winners</th></tr>${Object.entries(cmp).filter(([, v]) => v.manualExits != null || v.botWinners != null).map(([k, v]) => `<tr><td>${LBL[k] || k}</td><td>${v.manualExits ?? '—'}</td><td>${v.botWinners ?? '—'}</td></tr>`).join('')}</table>`
     : empty('Nothing to compare yet', 'Close a few positions yourself and tag why. After about 20 tagged exits the differences start to mean something.');
   const by = L.byReason || {}, tot = Object.values(by).reduce((a, b) => a + b, 0);
-  $('learnWhy').innerHTML = tot ? Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div class="risk" style="margin:0 0 12px"><div class="row"><span>${esc((REASONS.find(r => r[0] === k) || [0, k === 'untagged' ? 'Not tagged yet' : k])[1])}</span><span>${n}</span></div><div class="bar"><i style="width:${n / tot * 100}%;background:#7f6dff"></i></div></div>`).join('') : '<span class="why">Your tags will chart here.</span>';
+  $('learnWhy').innerHTML = tot ? Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div class="risk" style="margin:0 0 12px"><div class="row"><span>${esc(reasonLabel(k))}</span><span>${n}</span></div><div class="bar"><i style="width:${n / tot * 100}%;background:#7f6dff"></i></div></div>`).join('') : '<span class="why">Your tags will chart here.</span>';
   const bs = rep.bySetup || {}, rows = Object.entries(bs).filter(([k]) => k.endsWith('/taken') || k.endsWith('/skipped'));
   $('setups').innerHTML = rows.length ? `<table><tr><th>Setup and decision</th><th>Signals</th><th>Win 15m</th><th>Avg 15m</th></tr>${rows.map(([k, v]) => `<tr><td>${esc(k.replace('/', ', '))}</td><td>${v.n}</td><td>${v.winRate15 != null ? Math.round(v.winRate15 * 100) + '%' : '—'}</td><td class="${(v.avgR15 || 0) >= 0 ? 'g' : 'r'}">${v.avgR15 != null ? (v.avgR15 * 100).toFixed(1) + '%' : '—'}</td></tr>`).join('')}</table>` : '<span class="why">Appears after the bot has logged some signals.</span>';
   const sk = rep.bySkipReason || {}, sr = Object.entries(sk).sort((a, b) => b[1].n - a[1].n).slice(0, 10);
