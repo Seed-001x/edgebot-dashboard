@@ -580,7 +580,7 @@ function riskMeter(score, lim) {
 }
 function renderNow() {
   const st = DATA.state || {}, r = st.risk || {}, lim = st.limits || {}, stt = st.stats || {}, rep = DATA.report || {}, t = rep.trades || {};
-  $('mode').textContent = st.mode === 'REAL' ? 'Real money' : 'Shadow mode'; $('mode').className = 'pill ' + (st.mode === 'REAL' ? 'real' : 'shadow');
+  $('mode').textContent = st.mode === 'REAL' ? 'REAL' : 'Shadow mode'; $('mode').className = 'pill ' + (st.mode === 'REAL' ? 'real' : 'shadow');
   renderScene();
   const dp = Number(r.dayPnlSol) || 0;
   const pos = (st.positions || []).filter(p => !reacted[p.id || p.mint]);
