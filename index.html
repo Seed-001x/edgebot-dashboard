@@ -420,6 +420,18 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-exps" style="display:flex;flex-direction:column;gap:5px"></div>
       <div style="color:var(--lfaint);font-size:8px" id="lab-expLegend"></div>
      </div>
+     <div class="lb-box" style="border-color:rgba(69,224,154,.35)">
+      <div class="lb-title" style="font-size:9px"><span>SHADOW TRADES</span><small id="lab-shTag"></small></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">
+       <div><div style="font-size:8px;color:var(--ldim);letter-spacing:1px">OPENED</div><div style="font-size:13px;font-weight:800;color:var(--lbright)" id="lab-shOpened">—</div></div>
+       <div><div style="font-size:8px;color:var(--ldim);letter-spacing:1px">COMPLETED</div><div style="font-size:13px;font-weight:800;color:var(--lbright)" id="lab-shCompleted">—</div></div>
+       <div><div style="font-size:8px;color:var(--ldim);letter-spacing:1px">WINS</div><div style="font-size:13px;font-weight:800;color:var(--lbright)" id="lab-shWins">—</div></div>
+       <div><div style="font-size:8px;color:var(--ldim);letter-spacing:1px">NET SOL</div><div style="font-size:13px;font-weight:800" id="lab-shNet">—</div></div>
+      </div>
+      <div id="lab-shOpen" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div id="lab-shDone" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px">virtual trades run through the real exit stack · price-quote basis · no real orders</div>
+     </div>
      <div class="lb-lanes">
       <div class="lb-box">
        <div style="color:var(--lamber);font-weight:800;font-size:9px;letter-spacing:2px">YOU vs BOT</div>
@@ -774,7 +786,9 @@ if (!['now','trades','signals','lab'].includes(view)) view = 'now'; setView(view
    MOCK = false: every Adapter function reads the bot's live API via the
    dashboard's get(). Only the TICK STREAM has no live endpoint (the bot
    exposes no watchlist tick feed), so it keeps the mock generator and
-   carries a visible MOCK DATA tag in its lane header.
+   carries a visible MOCK DATA tag in its lane header. The SHADOW TRADES
+   panel's endpoint ships with the next bot build; until it answers 200
+   the panel shows a NOT LIVE YET tag and no numbers (no mock data).
    ===================================================================== */
 (function () {
 'use strict';
@@ -943,6 +957,54 @@ async function pairedLive() {
     if (done[0]) last = (done[0].symbol || 'coin') + ' final';
   } catch (e) {}
   return { pfYou: 1.65, pfBot: 0.57, n, target: 20, last };
+}
+
+/* ---------------- shadow trades (trade-grade shadow) ----------------
+   The bot endpoint ships with the NEXT bot build — until /shadowtrades
+   answers 200 the panel renders its shell with a NOT LIVE YET tag and no
+   numbers at all (no mock data in this panel, only an empty state). */
+let shadowC = { v: null, ts: 0 };
+async function shadowLive() {
+  if (shadowC.v && Date.now() - shadowC.ts < 15000) return shadowC.v;
+  let d = null, live = false;
+  try { d = await get('/shadowtrades?limit=8&offset=0'); live = !!(d && Array.isArray(d.done) && Array.isArray(d.pending)); } catch (e) { live = false; d = null; }
+  let counters = null;
+  if (live) { const s = await labState().catch(() => null); counters = (s && s.stats && s.stats.shadowTrades) || null; }
+  const v = { live, pending: live ? d.pending : [], done: live ? d.done : [], counters };
+  shadowC = { v, ts: Date.now() };
+  return v;
+}
+const shReason = r => String(r || 'exit').split('(')[0].trim().slice(0, 24) || 'exit';
+const shHeld = m => { if (m == null) return '—'; const r = Math.round(m); return r < 120 ? r + 'm' : (r / 60).toFixed(1) + 'h'; };
+function renderShadow(sh) {
+  const tag = el('shTag');
+  if (!sh.live) {
+    tag.textContent = 'NOT LIVE YET'; tag.style.color = 'var(--lamber)'; tag.style.fontWeight = '800'; tag.style.letterSpacing = '1px';
+    el('shOpened').textContent = '—'; el('shCompleted').textContent = '—'; el('shWins').textContent = '—';
+    el('shNet').textContent = '—'; el('shNet').style.color = 'var(--lbright)';
+    el('shOpen').innerHTML = '<div style="color:var(--lfaint);font-size:9px">endpoint ships with the next bot build — no virtual trades to show yet</div>';
+    el('shDone').innerHTML = '';
+    return;
+  }
+  tag.textContent = ''; tag.style.fontWeight = '400'; tag.style.letterSpacing = '0';
+  const c = sh.counters;
+  el('shOpened').textContent = c ? c.opened : '—';
+  el('shCompleted').textContent = c ? c.completed : '—';
+  el('shWins').textContent = c ? c.wins : '—';
+  el('shNet').textContent = c ? (c.netPnlSol >= 0 ? '+' : '') + (+c.netPnlSol).toFixed(4) : '—';
+  el('shNet').style.color = c ? (c.netPnlSol >= 0 ? C.green : C.red) : 'var(--lbright)';
+  el('shOpen').innerHTML = sh.pending.length ? sh.pending.slice(0, 4).map(p => {
+    const age = p.ageMin != null ? shHeld(p.ageMin) : (p.entryTs ? shHeld((Date.now() - p.entryTs) / 60000) : '—');
+    const peak = p.peakRatio != null ? (+p.peakRatio).toFixed(2) + 'x' : '—';
+    const val = p.lastValueSol != null ? (+p.lastValueSol).toFixed(4) + ' SOL' : '—';
+    return `<div class="lb-row"><span style="color:${DET_COLOR[p.setup] || C.cyan};font-weight:700">${escL((p.symbol || '?').slice(0, 8))}</span> <span style="color:var(--ldim)">${escL(p.setup || '')} · open ${age} · peak ${peak} · now ${val}</span></div>`;
+  }).join('') : '<div style="color:var(--lfaint);font-size:9px">no virtual positions open</div>';
+  el('shDone').innerHTML = sh.done.length ? sh.done.slice(0, 6).map(t => {
+    const pnl = t.pnlSol != null ? (t.pnlSol >= 0 ? '+' : '') + (+t.pnlSol).toFixed(4) : '—';
+    const col = t.pnlSol != null && t.pnlSol >= 0 ? C.green : C.red;
+    const exp = t.status === 'expired' ? ' · exp' : '';
+    return `<div class="lb-row"><span style="color:${DET_COLOR[t.setup] || C.cyan};font-weight:700">${escL((t.symbol || '?').slice(0, 8))}</span> <span style="color:var(--ldim)">${escL(t.setup || '')} · ${escL(shReason(t.exitReason))}${exp} · held ${shHeld(t.heldMin)} · </span><span style="color:${col};font-weight:700">${pnl}</span></div>`;
+  }).join('') : '<div style="color:var(--lfaint);font-size:9px">no completed virtual trades yet</div>';
 }
 
 /* ---------------- events: derived from live data ---------------- */
@@ -1134,6 +1196,7 @@ async function slowCycle() {
     const base = await baselineLive();
     renderExperiments(exps, base);
     renderStatic(await pairedLive(), await feesLive(), await metaLive());
+    renderShadow(await shadowLive());
     const evs = await deriveEvents();
     pushEvents(evs.concat(expEvents(exps, base)));
     saveEv();
@@ -1154,8 +1217,8 @@ window.LabStart = async function () {
     S.sig = seed.slice(); S.gate = seed.slice();
     for (let i = 0; i < 10; i++) S.ticks.push(labMockTick());
     S.events = await seedAndPrime();
-    const [exps, base, p, f, m] = await Promise.all([experimentsLive(), baselineLive(), pairedLive(), feesLive(), metaLive()]);
-    renderExperiments(exps, base); renderStatic(p, f, m);
+    const [exps, base, p, f, m, sh] = await Promise.all([experimentsLive(), baselineLive(), pairedLive(), feesLive(), metaLive(), shadowLive()]);
+    renderExperiments(exps, base); renderStatic(p, f, m); renderShadow(sh);
     for (const x of exps) evSeen.exp[x.code] = statusOf(x, base);
     saveEv();
     renderLanes(); renderEvents();
