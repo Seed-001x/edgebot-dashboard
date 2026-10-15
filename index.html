@@ -448,6 +448,16 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-rsRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">your answered coins signaling again · shadow only — nothing here trades</div>
      </div>
+     <div class="lb-box" style="border-color:rgba(255,209,102,.35)">
+      <div class="lb-title" style="font-size:9px"><span>CALLOUTS · shadow</span><small id="lab-coTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">would-calls the bot would have posted to pump.fun, scored like a follower: enter at call +2m, returns at 1h / 4h / 24h. Triggers: entry · TP1 · TP2 · TP3 · confluence · dev launch · graduation.</div>
+      <div id="lab-coStatus" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div id="lab-coRows" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div id="lab-coFirst3" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div id="lab-coRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px" id="lab-coBasis"></div>
+      <div style="color:var(--lfaint);font-size:8px">live callouts are off — these are would-calls, record-only · promotion is your call</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(69,224,154,.35)">
       <div class="lb-title" style="font-size:9px"><span>SHADOW TRADES</span><small id="lab-shTag"></small></div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">
@@ -1321,6 +1331,43 @@ function renderResignals(r) {
   }).join('') : `<div class="lb-row" style="color:#8a93bf">no re-signals yet${rsTab === 'all' ? '' : ' for this verdict'}</div>`;
 }
 el('rsSeg') && el('rsSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; rsTab = b.dataset.f; if (rsC.v) renderResignals(rsC.v); });
+/* ---------------- callout shadow lab: /callouts ---------------- */
+let coC = { v: null, ts: 0 };
+async function calloutsLive() {
+  if (coC.v && Date.now() - coC.ts < 30000) return coC.v;
+  const v = await get('/callouts').catch(() => null);
+  if (v && v.perTrigger) coC = { v, ts: Date.now() };
+  return (v && v.perTrigger) ? v : null;
+}
+const CO_TRIG = { entry: 'ENTRY', tp1: 'TP1', tp2: 'TP2', tp3: 'TP3', confluence: 'CONFL', devlaunch: 'DEV', graduation: 'GRAD' };
+function renderCallouts(r) {
+  const tag = el('coTag'), st = el('coStatus'), rows = el('coRows'), f3 = el('coFirst3'), recEl = el('coRecent'), bs = el('coBasis');
+  if (!tag || !rows) return;
+  if (!r) { tag.textContent = 'NOT LIVE YET'; st.innerHTML = ''; rows.innerHTML = ''; f3.innerHTML = ''; recEl.innerHTML = ''; bs.textContent = ''; return; }
+  const pct = x => x == null ? '—' : (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%';
+  const shp = x => x == null ? '—' : (x * 100).toFixed(0) + '%';
+  const sgn = x => x == null ? 'var(--lbright)' : x > 0 ? C.green : x < 0 ? C.red : 'var(--lbright)';
+  const trigs = Object.keys(r.perTrigger || {});
+  const readyOnes = trigs.filter(t => (r.perTrigger[t] || {}).ready);
+  tag.textContent = readyOnes.length ? `READY: ${readyOnes.map(t => CO_TRIG[t] || t).join(' · ')}` : 'COLLECTING';
+  st.innerHTML = `<div class="lb-row" style="color:#8a93bf">live callouts <span style="color:${r.liveCallouts ? C.red : C.green};font-weight:700">${r.liveCallouts ? 'ON' : 'OFF'}</span> · would-calls <span style="color:${C.bright};font-weight:700">${r.wouldCalls || 0}</span> · journal <span style="color:${C.bright};font-weight:700">${r.journalRecords || 0}</span> records</div>`;
+  rows.innerHTML = trigs.map(t => {
+    const a = r.perTrigger[t] || {};
+    const badge = a.ready ? ` <span style="color:${C.green};font-weight:800">READY</span>` : '';
+    return `<div class="lb-row" style="color:#8a93bf"><span style="color:${C.bright};font-weight:700">${CO_TRIG[t] || escL(t)}</span> n <span style="color:${C.bright};font-weight:700">${a.n || 0}</span> · pending ${a.pending || 0} · med 1h <span style="color:${sgn(a.medianR1h)};font-weight:700">${pct(a.medianR1h)}</span> · 4h <span style="color:${sgn(a.medianR4h)};font-weight:700">${pct(a.medianR4h)}</span> · 24h <span style="color:${sgn(a.medianR24h)};font-weight:700">${pct(a.medianR24h)}</span> · green 1h ${shp(a.sharePositive1h)} / 4h ${shp(a.sharePositive4h)} · best/worst 4h <span style="color:${C.green}">${pct(a.bestR4h)}</span>/<span style="color:${C.red}">${pct(a.worstR4h)}</span>${badge}</div>`;
+  }).join('');
+  const f = r.first3 || {};
+  f3.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf"><span style="color:${C.bright};font-weight:700">FIRST 3 / DAY</span> n <span style="color:${C.bright};font-weight:700">${f.n || 0}</span> over ${f.days || 0} days · pending ${f.pending || 0} · med 1h <span style="color:${sgn(f.medianR1h)};font-weight:700">${pct(f.medianR1h)}</span> · 4h <span style="color:${sgn(f.medianR4h)};font-weight:700">${pct(f.medianR4h)}</span> · 24h <span style="color:${sgn(f.medianR24h)};font-weight:700">${pct(f.medianR24h)}</span> · green 1h ${shp(f.sharePositive1h)} / 4h ${shp(f.sharePositive4h)}</div>` +
+    `<div style="color:var(--lfaint);font-size:8px">${escL(r.first3Basis || '')}</div>`;
+  recEl.innerHTML = (r.recent || []).slice(0, 8).map(e => {
+    const s = e.score;
+    const out = s ? `1h ${pct(s.r1h)} · 4h ${pct(s.r4h)} · 24h ${pct(s.r24h)} · peak24h ${pct(s.peak24h)}${s.final ? '' : ' · scoring…'}` : 'awaiting score';
+    const th = e.thesis ? ` · "${escL(String(e.thesis).slice(0, 90))}"` : '';
+    return `<div class="lb-row" style="color:#8a93bf">${escL(e.ts ? ago(e.ts) : '')} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> ${escL(CO_TRIG[e.trigger] || e.trigger || '')}${e.holding ? ' · held' : ''} · ${out}${th}</div>`;
+  }).join('') || `<div class="lb-row" style="color:#8a93bf">no would-calls yet</div>`;
+  bs.textContent = trigs.length ? ((r.perTrigger[trigs[0]] || {}).readyBasis || '') : '';
+}
 function renderExperiments(list, base) {
   el('baseline').textContent = `vs taken pops · ${base.runnerPct}% run · ${base.crashPct}% crash`;
   el('exps').innerHTML = list.map(x => {
@@ -1384,6 +1431,7 @@ async function slowCycle() {
     renderWallets(await devwatchLive());
     renderRatchet(await ratchetLive());
     renderResignals(await resignalsLive());
+    renderCallouts(await calloutsLive());
     const evs = await deriveEvents();
     pushEvents(evs.concat(expEvents(exps, base)));
     saveEv();
