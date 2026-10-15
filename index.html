@@ -316,15 +316,17 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
 /* ===== DESKTOP FIT (2026-10-15): wide screens use their width; the phone layout below 1024px is untouched ===== */
 @media(min-width:1024px){
   .shell{max-width:1200px;padding-left:24px;padding-right:24px}
-  .scene{max-width:860px}
+  .scene{max-width:880px}
   #manual{grid-template-columns:1fr 1fr}
+  #v-signals>h2,#signals{max-width:1120px;margin-left:auto;margin-right:auto}
   #v-lab .lb-root{max-width:none}
   #v-lab .lb-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
   #v-lab .lb-wrap>*{grid-column:1/-1;min-width:0}
   #v-lab .lb-wrap>.lb-box{grid-column:auto}
 }
 @media(min-width:1440px){
-  #signals,#trades,#manual{grid-template-columns:repeat(3,1fr)}
+  .shell{max-width:1320px}
+  .scene{max-width:980px}
   #v-lab .lb-wrap{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 </style>
