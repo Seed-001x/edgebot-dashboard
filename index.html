@@ -425,6 +425,13 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-exps" style="display:flex;flex-direction:column;gap:5px"></div>
       <div style="color:var(--lfaint);font-size:8px" id="lab-expLegend"></div>
      </div>
+     <div class="lb-box" style="border-color:rgba(242,184,75,.4)">
+      <div class="lb-title" style="font-size:9px"><span>WALLET DETECTORS · shadow</span><small id="lab-dwTag"></small></div>
+      <div id="lab-dwRows" style="display:flex;flex-direction:column;gap:5px"></div>
+      <div id="lab-dwDevs" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:4px"></div>
+      <div id="lab-dwRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px">dev launches (23 tagged devs) + survivor confluence (225 entities) · log only · outcomes vs the pinned baseline · promotion is a flag — your call</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(69,224,154,.35)">
       <div class="lb-title" style="font-size:9px"><span>SHADOW TRADES</span><small id="lab-shTag"></small></div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">
@@ -1191,6 +1198,39 @@ function renderEvents() {
   el('events').innerHTML = list.map(e => { const c = EVENT_COLOR[e.kind] || C.accent; return `<div class="lb-event ${e.fresh ? 'lb-pop' : ''}" style="border-color:${c};box-shadow:0 0 14px ${c}33"><div style="display:flex;justify-content:space-between;gap:6px"><span class="lb-tag" style="color:${c}">◆ ${escL(e.kind)}</span><span style="color:var(--lfaint);font-size:9px">${escL(e.t || '')}</span></div><div class="lb-msg">${escL(e.msg)}</div></div>`; }).join('');
   el('evToggle').textContent = S.showAll ? 'top 3' : 'history (' + S.events.length + ')';
 }
+/* ---------------- wallet detectors (Phases 4–6): /devwatch ---------------- */
+let dwC = { v: null, ts: 0 };
+async function devwatchLive() {
+  if (dwC.v && Date.now() - dwC.ts < 30000) return dwC.v;
+  const v = await get('/devwatch').catch(() => null);
+  if (v && v.counts) dwC = { v, ts: Date.now() };
+  return (v && v.counts) ? v : null;
+}
+function renderWallets(w) {
+  const tag = el('dwTag'), rows = el('dwRows'), devsEl = el('dwDevs'), recEl = el('dwRecent');
+  if (!tag || !rows) return;
+  if (!w) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; devsEl.innerHTML = ''; recEl.innerHTML = ''; return; }
+  const pc = x => x == null ? '—' : (x * 100).toFixed(0) + '%';
+  const rpc = x => x == null ? '—' : (x >= 0 ? '+' : '') + (x * 100).toFixed(0) + '%';
+  tag.textContent = `${w.counts.devWallets} devs · ${w.counts.survivorWallets} wallets / ${w.counts.survivorEntities} entities · ${w.counts.pending} tracking`;
+  const devFin = w.devs.reduce((a, d) => a + (d.finalized || 0), 0);
+  const devEv = w.devs.reduce((a, d) => a + (d.events || 0), 0);
+  const q = w.devs.filter(d => d.status === 'qualified').length, dm = w.devs.filter(d => d.status === 'demoted').length;
+  const c = w.confluence || {};
+  const row = (code, label, nTxt, stTxt, col) => `<div class="lb-exp"><span style="color:${C.bright};font-weight:800">${code}</span><span style="color:#8a93bf">${escL(label)}</span><span style="color:#8a93bf">${nTxt}</span><span style="font-size:9px;font-weight:800;text-align:right;color:${col}">${stTxt}</span></div>`;
+  rows.innerHTML =
+    row('DEV', 'dev launches', `${devEv} events · ${devFin} scored`, q ? `${q} QUALIFIED` : dm ? `${dm} DEMOTED` : 'COLLECT', q ? C.green : dm ? C.red : C.amber) +
+    row('CNF', 'confluence', `${c.events || 0} events · ${c.finalized || 0}/${w.qual ? w.qual.conflN : 30} scored · run ${pc(c.runnerShare)} · crash ${pc(c.crashShare)}`, c.status === 'qualified' ? 'QUALIFIED' : 'COLLECT', c.status === 'qualified' ? C.green : C.amber);
+  const chip = s => s === 'qualified' ? ['QUALIFIED', C.green] : s === 'demoted' ? ['DEMOTED', C.red] : ['COLLECT', C.amber];
+  devsEl.innerHTML = w.devs.map(d => { const [st, col] = chip(d.status); return `<div style="border:1px solid rgba(139,123,255,.25);border-radius:6px;padding:4px 6px"><div style="color:${C.bright};font-weight:700;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escL(d.name)}</div><div style="color:#8a93bf;font-size:9px">${d.events || 0} launches · ${d.finalized || 0} scored</div><div style="color:#8a93bf;font-size:9px">run ${pc(d.runnerShare)} · peak ${d.medPeak == null ? '—' : d.medPeak.toFixed(1) + 'x'}</div><div style="color:${col};font-size:9px;font-weight:800">${st}</div></div>`; }).join('');
+  recEl.innerHTML = (w.recent || []).slice(0, 6).map(e => {
+    const who = e.kind === 'dev' ? `dev · ${escL(e.devName || '')}${e.sub ? ' · ' + escL(e.sub) : ''}` : `confluence · ${escL((e.names || []).join(', '))}`;
+    const gate = e.gatePass === true ? 'gates PASS' : e.gatePass === false ? 'gates block: ' + escL(e.firstBlocker || '?') : 'gates n/a';
+    const out = e.out && e.out.done ? (e.out.maxRet != null ? `peak ${rpc(e.out.maxRet)} · r60 ${rpc(e.out.r60)}` : 'no price path') : 'tracking…';
+    const sell = e.devSell ? ` · dev sold +${Math.max(0, Math.round((e.devSell.ts - e.buyTs) / 60000))}m` : '';
+    return `<div class="lb-row" style="color:#8a93bf">${escL(new Date(e.ts).toTimeString().slice(0, 5))} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> ${who} · ${gate} · ${out}${sell}</div>`;
+  }).join('');
+}
 function renderExperiments(list, base) {
   el('baseline').textContent = `vs taken pops · ${base.runnerPct}% run · ${base.crashPct}% crash`;
   el('exps').innerHTML = list.map(x => {
@@ -1251,6 +1291,7 @@ async function slowCycle() {
     renderExperiments(exps, base);
     renderStatic(await pairedLive(), await feesLive(), await metaLive());
     renderShadow(await shadowLive());
+    renderWallets(await devwatchLive());
     const evs = await deriveEvents();
     pushEvents(evs.concat(expEvents(exps, base)));
     saveEv();
