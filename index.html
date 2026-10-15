@@ -432,6 +432,14 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-dwRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">dev launches (23 tagged devs) + survivor confluence (225 entities) · log only · outcomes vs the pinned baseline · promotion is a flag — your call</div>
      </div>
+     <div class="lb-box" style="border-color:rgba(90,216,255,.35)">
+      <div class="lb-title" style="font-size:9px"><span>RATCHET JUDGE · shadow</span><small id="lab-rjTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">stream judge vs the 4s-poll judge on the break-even ratchet — both watch the same positions and log when they WOULD have fired. Record-only: neither can sell. Lead time counts only positions both judges armed on.</div>
+      <div id="lab-rjRows" style="display:flex;flex-direction:column;gap:5px"></div>
+      <div id="lab-rjCmp" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div id="lab-rjRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px" id="lab-rjKnobs"></div>
+     </div>
      <div class="lb-box" style="border-color:rgba(69,224,154,.35)">
       <div class="lb-title" style="font-size:9px"><span>SHADOW TRADES</span><small id="lab-shTag"></small></div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">
@@ -1231,6 +1239,45 @@ function renderWallets(w) {
     return `<div class="lb-row" style="color:#8a93bf">${escL(new Date(e.ts).toTimeString().slice(0, 5))} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> ${who} · ${gate} · ${out}${sell}</div>`;
   }).join('');
 }
+/* ---------------- ratchet judge (stream vs poll): /ratchetshadow ---------------- */
+let rjC = { v: null, ts: 0 };
+async function ratchetLive() {
+  if (rjC.v && Date.now() - rjC.ts < 30000) return rjC.v;
+  const v = await get('/ratchetshadow').catch(() => null);
+  if (v && v.counters) rjC = { v, ts: Date.now() };
+  return (v && v.counters) ? v : null;
+}
+function renderRatchet(r) {
+  const tag = el('rjTag'), rows = el('rjRows'), cmp = el('rjCmp'), recEl = el('rjRecent'), kn = el('rjKnobs');
+  if (!tag || !rows) return;
+  if (!r) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; cmp.innerHTML = ''; recEl.innerHTML = ''; kn.textContent = ''; return; }
+  const mv = x => x == null ? '—' : (x >= 1 ? '+' : '') + ((x - 1) * 100).toFixed(1) + '%';
+  const shp = x => x == null ? '—' : (x * 100).toFixed(0) + '%';
+  const ct = r.counters || {}, bk = r.byKind || {}, ba = r.bothArmed || {}, cv = r.coverage || {}, kb = r.knobs || {};
+  tag.textContent = ba.n > 0 ? `STREAM vs POLL · ${ba.n} both-armed` : 'COLLECTING';
+  const row = (code, label, nTxt, stTxt, col) => `<div class="lb-exp"><span style="color:${C.bright};font-weight:800">${code}</span><span style="color:#8a93bf">${escL(label)}</span><span style="color:#8a93bf">${nTxt}</span><span style="font-size:9px;font-weight:800;text-align:right;color:${col}">${stTxt}</span></div>`;
+  rows.innerHTML =
+    row('POLL', 'poll judge (4s quote)', `${ct.wouldFire || 0} would-fires`, 'TICK', C.cyan) +
+    row('STR', 'stream judge · real positions', `${ct.streamWouldFire || 0} would-fires`, 'STREAM', C.accent) +
+    row('SHD', 'stream judge · shadow book', `${ct.streamShadowWouldFire || 0} would-fires`, 'STREAM', C.amber) +
+    row('DONE', 'completions', `${bk.closedReal || 0} real · ${bk.closedShadow || 0} shadow`, 'CLOSED', C.green) +
+    row('QUAL', 'fire-quality probes', `${bk.fireQuality || 0} logged (+30s / +60s marks)`, 'PROBE', C.pink);
+  const lead = ba.medianLeadSec == null ? '—' : ba.medianLeadSec >= 0 ? `stream first by ${ba.medianLeadSec.toFixed(1)}s` : `poll first by ${Math.abs(ba.medianLeadSec).toFixed(1)}s`;
+  cmp.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf">both-armed completions <span style="color:${C.bright};font-weight:700">${ba.n || 0}</span> · median lead <span style="color:${C.bright};font-weight:700">${lead}</span> (positive lead = stream fired first)</div>` +
+    `<div class="lb-row" style="color:#8a93bf">stream-only arms <span style="color:${C.bright};font-weight:700">${ba.streamOnlyArms || 0}</span> · tick-only arms <span style="color:${C.bright};font-weight:700">${ba.tickOnlyArms || 0}</span></div>` +
+    `<div class="lb-row" style="color:#8a93bf">stream coverage <span style="color:${C.bright};font-weight:700">${cv.covered || 0}/${cv.closed || 0}</span> completions</div>`;
+  recEl.innerHTML = (r.recent || []).slice(0, 8).map(e => {
+    let what = '';
+    if (e.kind === 'would-fire') what = `poll would-fire · move ${mv(e.moveAtFire)} off peak ${mv(e.peakMove)} · sells ${shp(e.sellShare)}`;
+    else if (e.kind === 'would-fire-stream') what = `stream would-fire · move ${mv(e.streamMove)} off peak ${mv(e.streamPeakMove)} · sells ${shp(e.sellShare)} · poll ${e.jupArmed ? 'armed too' : 'not armed'} · poll move ${mv(e.jupMove)}`;
+    else if (e.kind === 'fire-quality') what = `fire quality +${e.atSec || '?'}s · poll move ${mv(e.jupMove)}`;
+    else if (e.kind === 'closed') what = `${escL(e.exitReason || 'closed')} · pnl ${e.pnlSol == null ? '—' : (e.pnlSol >= 0 ? '+' : '') + e.pnlSol.toFixed(4)}${e.leadSec != null ? (e.leadSec >= 0 ? ` · stream led by ${(+e.leadSec).toFixed(1)}s` : ` · poll led by ${Math.abs(e.leadSec).toFixed(1)}s`) : ''} · ${e.streamCovered ? 'stream covered' : 'no stream'}`;
+    const src = e.source ? ` <span style="color:${e.source === 'shadow' ? C.amber : C.cyan}">${escL(e.source)}</span>` : '';
+    return `<div class="lb-row" style="color:#8a93bf">${escL(e.ts ? ago(e.ts) : '')} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span>${src} ${what}</div>`;
+  }).join('');
+  kn.textContent = `judge every ${kb.evalMs}ms · VWAP ${kb.vwapSec}s · flow ${kb.flowWindowSec}s · sells ≥${Math.round((kb.flowSellShare || 0) * 100)}% & ≥${kb.flowMinSellSol} SOL · arm +${Math.round((kb.beArmPct || 0) * 100)}% / trigger +${Math.round((kb.beTriggerPct || 0) * 100)}% · aggregates over the last ${r.journalRecords || 0} journal records`;
+}
 function renderExperiments(list, base) {
   el('baseline').textContent = `vs taken pops · ${base.runnerPct}% run · ${base.crashPct}% crash`;
   el('exps').innerHTML = list.map(x => {
@@ -1292,6 +1339,7 @@ async function slowCycle() {
     renderStatic(await pairedLive(), await feesLive(), await metaLive());
     renderShadow(await shadowLive());
     renderWallets(await devwatchLive());
+    renderRatchet(await ratchetLive());
     const evs = await deriveEvents();
     pushEvents(evs.concat(expEvents(exps, base)));
     saveEv();
