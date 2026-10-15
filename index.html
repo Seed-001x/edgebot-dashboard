@@ -213,7 +213,7 @@ body:has(#v-now.on) .banner{position:fixed;top:84px;left:50%;transform:translate
 .item{display:grid;gap:8px}
 .item .row1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .tag{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--panel2);border:1px solid var(--rule)}
-.tag.taken{color:var(--gain);border-color:#37e2a355} .tag.skipped{color:var(--dim)}
+.tag.taken{color:var(--gain);border-color:#37e2a355} .tag.skipped{color:var(--dim)} .tag.shadow{color:#bdb3ff;border-color:#7f6dff55}
 .why{font-size:14px;color:var(--dim)}
 .seg{display:inline-flex;background:var(--panel);border:1px solid var(--rule);border-radius:99px;padding:3px}
 .seg button{background:none;border:0;padding:6px 14px;border-radius:99px;font-size:13px;font-weight:600;color:var(--dim)}
@@ -1076,7 +1076,7 @@ function renderSignals() {
   $('sigN').textContent = s.length + ' shown';
   $('signals').innerHTML = s.length ? s.map(x => {
     const taken = x.decision === 'taken', why = taken ? 'Passed every gate and the bot bought it.' : ((x.reasons && x.reasons[0]) || 'Skipped');
-    return `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px"><a href="${chartUrl(x.mint)}" target="_blank" rel="noopener">${esc(x.symbol)}</a></span><span class="tag ${esc(x.decision)}">${taken ? 'Bought' : 'Skipped'}</span></div>
+    return `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px"><a href="${chartUrl(x.mint)}" target="_blank" rel="noopener">${esc(x.symbol)}</a></span><span class="tag ${esc(x.decision)}">${taken ? 'Bought' : x.decision === 'shadow' ? 'Shadow' : 'Skipped'}</span></div>
       ${x.label ? `<div class="flab">⚡ ${esc(x.label)}</div>` : ''}
       <div class="why">${esc(why)}</div>
       <div class="mono">${esc(x.setup || '')}, market cap ${money(x.mc)}${x.ts ? ', ' + ago(x.ts) : ''}</div>
