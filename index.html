@@ -465,6 +465,14 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-feRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">record-only — the bot never exits on a wallet's move · promotion is your call</div>
      </div>
+     <div class="lb-box" style="border-color:rgba(255,138,61,.35)">
+      <div class="lb-title" style="font-size:9px"><span>STRUCTURE WATCH · shadow</span><small id="lab-swTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">seeded by every signal, each coin followed for up to 4h — records the staircase of confirmed higher lows on 5m candles and a holder count every ~5 min. Each higher low is a would-enter mark, split by whether holders were growing at the mark.</div>
+      <div id="lab-swRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
+      <div id="lab-swAgg" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div id="lab-swRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px">record-only — structure is observed, never traded · promotion is your call</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(69,224,154,.35)">
       <div class="lb-title" style="font-size:9px"><span>SHADOW TRADES</span><small id="lab-shTag"></small></div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">
@@ -1079,6 +1087,7 @@ function loadShadowCards() {
   loadCard(resignalsLive, renderResignals, null, 'rsAgg');
   loadCard(calloutsLive, renderCallouts, null, 'coRows');
   loadCard(flowExitsLive, renderFlowExits, null, 'feRows');
+  loadCard(structureLive, renderStructure, null, 'swRows');
 }
 /* ---------------- shadow trades (trade-grade shadow) ----------------
    The bot endpoint ships with the NEXT bot build — until /shadowtrades
@@ -1432,6 +1441,42 @@ function renderFlowExits(r) {
     const tail = e.botOpen ? ' · bot still in' : ` · bot PnL <span style="color:${sgn(e.botPnlSol)};font-weight:700">${sol(e.botPnlSol)}</span> · Δ <span style="color:${sgn(e.deltaSol)};font-weight:700">${sol(e.deltaSol)}</span>`;
     return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> ${escL(e.wallet || '')} ${chip} · held ${dur(e.heldSec)} · bot <span style="color:${sgn(e.botMovePct)};font-weight:700">${pct(e.botMovePct)}</span>${tail}</div>`;
   }).join('') || `<div class="lb-row" style="color:#8a93bf">no wallet exits recorded yet</div>`;
+}
+/* ---------------- structure watch: /structurewatch ----------------
+   All return values from the endpoint are FRACTIONS (0.5 = +50%), the
+   /resignals convention — pct()/shp() below multiply out. */
+let swC = { v: null, ts: 0 };
+async function structureLive() {
+  if (swC.v && Date.now() - swC.ts < 30000) return swC.v;
+  const v = await get('/structurewatch').catch(() => null);
+  if (v && v.byOrdinal) swC = { v, ts: Date.now() };
+  return (v && v.byOrdinal) ? v : null;
+}
+function renderStructure(r) {
+  const tag = el('swTag'), rows = el('swRows'), agg = el('swAgg'), recEl = el('swRecent');
+  if (!tag || !rows) return;
+  if (!r) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; agg.innerHTML = ''; recEl.innerHTML = ''; return; }
+  const pct = x => x == null ? '—' : (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%';
+  const shp = x => x == null ? '—' : (x * 100).toFixed(0) + '%';
+  const sgn = x => x == null ? 'var(--lbright)' : x > 0 ? C.green : x < 0 ? C.red : 'var(--lbright)';
+  const edt = ts => new Date(ts).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit' });
+  const stat = (label, a) => `<div class="lb-row" style="color:#8a93bf"><span style="color:${C.bright};font-weight:700">${label}</span> n <span style="color:${C.bright};font-weight:700">${(a && a.n) || 0}</span> · finalized ${(a && a.finalized) || 0} · med r60 <span style="color:${sgn(a && a.medianR60)};font-weight:700">${pct(a && a.medianR60)}</span> · med peak <span style="color:${sgn(a && a.medianPeak)};font-weight:700">${pct(a && a.medianPeak)}</span> · peaked +50% ${shp(a && a.sharePeak50)}</div>`;
+  tag.textContent = r.ready ? `READY · n=${r.marksFinalized || 0}` : 'COLLECTING';
+  rows.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf">watching now <span style="color:${C.bright};font-weight:700">${r.watching || 0}</span> · watched total <span style="color:${C.bright};font-weight:700">${r.watchedTotal || 0}</span> · ended <span style="color:${C.bright};font-weight:700">${r.ended || 0}</span></div>` +
+    `<div class="lb-row" style="color:#8a93bf">marks <span style="color:${C.bright};font-weight:700">${r.marks || 0}</span> (${r.marksFinalized || 0} finalized) · samples <span style="color:${C.bright};font-weight:700">${r.samples || 0}</span> · holder samples (DAS calls) <span style="color:${C.bright};font-weight:700">${r.holderSamples || 0}</span> · skipped at cap <span style="color:${C.bright};font-weight:700">${r.skippedCap || 0}</span></div>`;
+  const bo = r.byOrdinal || {}, hs = r.holderSplit || {};
+  agg.innerHTML =
+    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY STAIRCASE STEP</div>` +
+    stat('HL1', bo['1']) + stat('HL2', bo['2']) + stat('HL3+', bo['3+']) +
+    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY HOLDER GROWTH AT MARK</div>` +
+    stat('holders growing', hs.growing) + stat('holders flat', hs.flat) + stat('holders shrinking', hs.shrinking) +
+    `<div class="lb-row" style="color:#8a93bf">holder growth unknown on <span style="color:${C.bright};font-weight:700">${hs.unknown || 0}</span> marks</div>`;
+  recEl.innerHTML = (r.recentMarks || []).slice(0, 8).map(e => {
+    const chip = `<span style="color:${C.orange};font-weight:800">${e.ordinal >= 3 ? 'HL3+' : 'HL' + (e.ordinal || '?')}</span>`;
+    const out = (e.r60 == null && e.peakPct == null) ? 'tracking…' : `r60 <span style="color:${sgn(e.r60)};font-weight:700">${pct(e.r60)}</span> · peak <span style="color:${sgn(e.peakPct)};font-weight:700">${pct(e.peakPct)}</span>`;
+    return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> ${chip} · holders <span style="color:${sgn(e.holderGrowthPct)};font-weight:700">${pct(e.holderGrowthPct)}</span> · ${out}</div>`;
+  }).join('') || `<div class="lb-row" style="color:#8a93bf">no higher-low marks yet</div>`;
 }
 function renderExperiments(list, base) {
   el('baseline').textContent = `vs taken pops · ${base.runnerPct}% run · ${base.crashPct}% crash`;
