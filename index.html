@@ -226,6 +226,7 @@ h2 .n{font-weight:500;color:var(--faint)}
 .repcard.open .mbody{display:block}
 .repcard .mtag{font:500 12px var(--body);color:var(--dim);margin-left:8px}
 .fb{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid var(--rule2);font-size:13px;color:var(--dim)}
+.flab{color:#f2b84b;font-weight:600;font-size:13.5px;margin-top:3px}
 .fbnote{margin-top:10px;padding-top:10px;border-top:1px solid var(--rule2);display:flex;flex-direction:column;gap:8px}
 .fbnote textarea{background:var(--panel2);border:1px solid var(--rule);border-radius:10px;color:var(--text);padding:10px;font:14px/1.45 var(--body);resize:vertical;min-height:46px;width:100%;box-sizing:border-box}
 .fbnote textarea:focus{outline:none;border-color:var(--uv)}
@@ -758,6 +759,7 @@ function renderSignals() {
   $('signals').innerHTML = s.length ? s.map(x => {
     const taken = x.decision === 'taken', why = taken ? 'Passed every gate and the bot bought it.' : ((x.reasons && x.reasons[0]) || 'Skipped');
     return `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px"><a href="${chartUrl(x.mint)}" target="_blank" rel="noopener">${esc(x.symbol)}</a></span><span class="tag ${esc(x.decision)}">${taken ? 'Bought' : 'Skipped'}</span></div>
+      ${x.label ? `<div class="flab">⚡ ${esc(x.label)}</div>` : ''}
       <div class="why">${esc(why)}</div>
       <div class="mono">${esc(x.setup || '')}, market cap ${money(x.mc)}${x.ts ? ', ' + ago(x.ts) : ''}</div>
       ${!taken ? `<div class="fb"><span>Was skipping it right?</span><div>
@@ -792,6 +794,7 @@ function renderAnswers() {
     const ctx = s ? `${esc(s.setup || '')}, ${dec === 'taken' ? 'bought' : dec === 'shadow' ? 'shadow signal' : 'skipped'} at ${money(s.mc)}${s.ts ? ', ' + ago(s.ts) : ''}` : 'signal no longer in the journal window';
     const out = s && s.out ? (s.out.done ? `Outcome: 60m ${rpct(s.out.r60)}, peak ${rpct(s.out.maxRet)}${s.out.partial ? ' (partial tracking)' : ''}` : 'Outcome: still tracking…') : '';
     return `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px"><a href="${chartUrl(f.mint)}" target="_blank" rel="noopener">${esc(f.symbol || (s && s.symbol) || '?')}</a></span><span class="tag ${esc(dec || 'skipped')}">${mark}</span></div>
+      ${s && s.label ? `<div class="flab">⚡ ${esc(s.label)}</div>` : ''}
       <div class="why">${ctx}</div>
       ${out ? `<div class="mono">${out}</div>` : ''}
       <div class="mono">You answered ${ago(f.ts)}</div>
