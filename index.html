@@ -440,6 +440,14 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-rjRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px" id="lab-rjKnobs"></div>
      </div>
+     <div class="lb-box" style="border-color:rgba(255,143,171,.35)">
+      <div class="lb-title" style="font-size:9px"><span>ANSWERED RE-SIGNALS · shadow</span><small id="lab-rsTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">coins you already answered, signaling again — how the re-signal did, split by your verdict. The marked signal itself never counts: a re-signal lands 5m+ after it, once per mark, and marking the mint again re-arms it.</div>
+      <span class="seg" id="lab-rsSeg"></span>
+      <div id="lab-rsAgg" style="display:flex;flex-direction:column;gap:5px"></div>
+      <div id="lab-rsRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px">your answered coins signaling again · shadow only — nothing here trades</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(69,224,154,.35)">
       <div class="lb-title" style="font-size:9px"><span>SHADOW TRADES</span><small id="lab-shTag"></small></div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">
@@ -1278,6 +1286,41 @@ function renderRatchet(r) {
   }).join('');
   kn.textContent = `judge every ${kb.evalMs}ms · VWAP ${kb.vwapSec}s · flow ${kb.flowWindowSec}s · sells ≥${Math.round((kb.flowSellShare || 0) * 100)}% & ≥${kb.flowMinSellSol} SOL · arm +${Math.round((kb.beArmPct || 0) * 100)}% / trigger +${Math.round((kb.beTriggerPct || 0) * 100)}% · aggregates over the last ${r.journalRecords || 0} journal records`;
 }
+/* ---------------- answered re-signals: /resignals ---------------- */
+let rsC = { v: null, ts: 0 }, rsTab = 'all';
+async function resignalsLive() {
+  if (rsC.v && Date.now() - rsC.ts < 30000) return rsC.v;
+  const v = await get('/resignals').catch(() => null);
+  if (v && v.byVerdict) rsC = { v, ts: Date.now() };
+  return (v && v.byVerdict) ? v : null;
+}
+const RS_SHORT = { 'Good coin — missed it': '✗ missed it', 'Correct skip': '✓ correct skip', 'You backed it': 'backed it', 'Bad setup — avoid': 'bad setup' };
+function renderResignals(r) {
+  const tag = el('rsTag'), seg = el('rsSeg'), agg = el('rsAgg'), recEl = el('rsRecent');
+  if (!tag || !seg || !agg || !recEl) return;
+  if (!r) { tag.textContent = 'NOT LIVE YET'; seg.innerHTML = ''; agg.innerHTML = ''; recEl.innerHTML = ''; return; }
+  const pct = x => x == null ? '—' : (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%';
+  const shp = x => x == null ? '—' : (x * 100).toFixed(0) + '%';
+  const mc = x => x == null ? '—' : '$' + (x >= 1000 ? (x / 1000).toFixed(1) + 'K' : Math.round(x));
+  const verdicts = Object.keys(r.byVerdict || {});
+  if (rsTab !== 'all' && !verdicts.includes(rsTab)) rsTab = 'all';
+  const lead = verdicts.map(v => [v, (r.byVerdict[v] || {}).finalized || 0]).sort((a, b) => b[1] - a[1])[0];
+  tag.textContent = lead && lead[1] >= 10 ? `n=${lead[1]} FINALIZED` : 'COLLECTING';
+  seg.innerHTML = ['all', ...verdicts].map(v => `<button data-f="${escL(v)}" aria-pressed="${rsTab === v}">${v === 'all' ? 'All' : escL(RS_SHORT[v] || v)}</button>`).join('');
+  const a = rsTab === 'all' ? (r.all || {}) : (r.byVerdict[rsTab] || {});
+  const stat = (k, val, col) => `<div><div style="font-size:8px;color:var(--ldim);letter-spacing:1px">${k}</div><div style="font-size:13px;font-weight:800;color:${col || 'var(--lbright)'}">${val}</div></div>`;
+  const sgn = x => x == null ? 'var(--lbright)' : x > 0 ? C.green : x < 0 ? C.red : 'var(--lbright)';
+  agg.innerHTML =
+    `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">${stat('RE-SIGNALS', a.n ?? 0)}${stat('FINALIZED', a.finalized ?? 0)}${stat('MEDIAN PEAK', pct(a.medianPeak), sgn(a.medianPeak))}${stat('MEDIAN R60', pct(a.medianR60), sgn(a.medianR60))}</div>` +
+    `<div class="lb-row" style="color:#8a93bf">peaked +50% <span style="color:${C.bright};font-weight:700">${shp(a.sharePeak50)}</span> · green at 1h <span style="color:${C.bright};font-weight:700">${shp(a.sharePosR60)}</span> · pinned taken-pop context: ${r.baseline ? `${r.baseline.runners}% ran · r60 ${r.baseline.r60}%` : '—'}</div>`;
+  const rows = (r.recent || []).filter(e => rsTab === 'all' || e.verdict === rsTab).slice(0, 8);
+  recEl.innerHTML = rows.length ? rows.map(e => {
+    const gap = e.markedTs && e.ts ? ` · +${Math.max(0, Math.round((e.ts - e.markedTs) / 60000))}m later` : '';
+    const out = e.out && e.out.done ? `peak ${pct(e.out.maxRet)} · r60 ${pct(e.out.r60)}` : 'tracking…';
+    return `<div class="lb-row" style="color:#8a93bf">${escL(e.ts ? ago(e.ts) : '')} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> ${escL(RS_SHORT[e.verdict] || e.verdict || '')} · marked ${mc(e.markedMc)} → re-signal ${mc(e.resignalMc)}${gap} · ${out}${e.notePresent ? ' · 📝 note' : ''}</div>`;
+  }).join('') : `<div class="lb-row" style="color:#8a93bf">no re-signals yet${rsTab === 'all' ? '' : ' for this verdict'}</div>`;
+}
+el('rsSeg') && el('rsSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; rsTab = b.dataset.f; if (rsC.v) renderResignals(rsC.v); });
 function renderExperiments(list, base) {
   el('baseline').textContent = `vs taken pops · ${base.runnerPct}% run · ${base.crashPct}% crash`;
   el('exps').innerHTML = list.map(x => {
@@ -1340,6 +1383,7 @@ async function slowCycle() {
     renderShadow(await shadowLive());
     renderWallets(await devwatchLive());
     renderRatchet(await ratchetLive());
+    renderResignals(await resignalsLive());
     const evs = await deriveEvents();
     pushEvents(evs.concat(expEvents(exps, base)));
     saveEv();
