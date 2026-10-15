@@ -344,6 +344,25 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
   /* home scene stays uncapped at every width (see the 1024px block note) */
   #v-lab .lb-wrap{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+/* ===== PHONE HOME (<=759px) — reference composition (user screenshot, 2026-10-15): header row back in
+   flow with the REAL pill restored in its spot; the scene is ONE contained full-width square (the stage
+   fills it, so every monitor — P&L / OPEN / SCAN / WIN RATE / LAST TRADE / RISK — is on screen and the
+   desk panel sits whole inside the square) instead of a 100dvh stage cropped at both sides; the side-life
+   layers are off (a full-width stage leaves no side zones, and their vh-based mask collapses at this
+   width), the ambient drift is stilled, and the fixed 100dvh scene that ghosted the deck over the art on
+   iOS is gone. The carbon deck below keeps its approved treatment and stacks in normal flow.
+   Nothing here applies at >=760px: desktop rendering is untouched. */
+@media(max-width:759px){
+  body:has(#v-now.on) header.top{position:static;padding:16px 0 8px;background:none;pointer-events:auto}
+  body:has(#v-now.on) #mode{display:inline-flex!important}
+  header.top .brand{font-size:18px}
+  header.top .pills{gap:6px;min-width:0}
+  header.top .pill{font-size:11px;padding:4px 9px;gap:6px;white-space:nowrap;min-width:0}
+  #ksState,#beatTxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #scene{height:100vw;min-height:0}
+  #scene .ambient{animation:none}
+  #scene .ambglow,#scene .sidestream,#scene .citylights{display:none}
+}
 </style>
 </head>
 <body data-state="idle">
