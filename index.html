@@ -427,7 +427,7 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
      </div>
      <div class="lb-box" style="border-color:rgba(242,184,75,.4)">
       <div class="lb-title" style="font-size:9px"><span>WALLET DETECTORS · shadow</span><small id="lab-dwTag"></small></div>
-      <div id="lab-dwRows" style="display:flex;flex-direction:column;gap:5px"></div>
+      <div id="lab-dwRows" style="display:flex;flex-direction:column;gap:5px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
       <div id="lab-dwDevs" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:4px"></div>
       <div id="lab-dwRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">dev launches (23 tagged devs) + survivor confluence (225 entities) · log only · outcomes vs the pinned baseline · promotion is a flag — your call</div>
@@ -435,7 +435,7 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
      <div class="lb-box" style="border-color:rgba(90,216,255,.35)">
       <div class="lb-title" style="font-size:9px"><span>RATCHET JUDGE · shadow</span><small id="lab-rjTag"></small></div>
       <div style="color:#8a93bf;font-size:9px">stream judge vs the 4s-poll judge on the break-even ratchet — both watch the same positions and log when they WOULD have fired. Record-only: neither can sell. Lead time counts only positions both judges armed on.</div>
-      <div id="lab-rjRows" style="display:flex;flex-direction:column;gap:5px"></div>
+      <div id="lab-rjRows" style="display:flex;flex-direction:column;gap:5px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
       <div id="lab-rjCmp" style="display:flex;flex-direction:column;gap:1px"></div>
       <div id="lab-rjRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px" id="lab-rjKnobs"></div>
@@ -444,7 +444,7 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div class="lb-title" style="font-size:9px"><span>ANSWERED RE-SIGNALS · shadow</span><small id="lab-rsTag"></small></div>
       <div style="color:#8a93bf;font-size:9px">coins you already answered, signaling again — how the re-signal did, split by your verdict. The marked signal itself never counts: a re-signal lands 5m+ after it, once per mark, and marking the mint again re-arms it.</div>
       <span class="seg" id="lab-rsSeg"></span>
-      <div id="lab-rsAgg" style="display:flex;flex-direction:column;gap:5px"></div>
+      <div id="lab-rsAgg" style="display:flex;flex-direction:column;gap:5px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
       <div id="lab-rsRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">your answered coins signaling again · shadow only — nothing here trades</div>
      </div>
@@ -452,7 +452,7 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div class="lb-title" style="font-size:9px"><span>CALLOUTS · shadow</span><small id="lab-coTag"></small></div>
       <div style="color:#8a93bf;font-size:9px">would-calls the bot would have posted to pump.fun, scored like a follower: enter at call +2m, returns at 1h / 4h / 24h. Triggers: entry · TP1 · TP2 · TP3 · confluence · dev launch · graduation.</div>
       <div id="lab-coStatus" style="display:flex;flex-direction:column;gap:1px"></div>
-      <div id="lab-coRows" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div id="lab-coRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
       <div id="lab-coFirst3" style="display:flex;flex-direction:column;gap:1px"></div>
       <div id="lab-coRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px" id="lab-coBasis"></div>
@@ -466,7 +466,7 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
        <div><div style="font-size:8px;color:var(--ldim);letter-spacing:1px">WINS</div><div style="font-size:13px;font-weight:800;color:var(--lbright)" id="lab-shWins">—</div></div>
        <div><div style="font-size:8px;color:var(--ldim);letter-spacing:1px">NET SOL</div><div style="font-size:13px;font-weight:800" id="lab-shNet">—</div></div>
       </div>
-      <div id="lab-shOpen" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div id="lab-shOpen" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
       <div id="lab-shDone" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">virtual trades run through the real exit stack · price-quote basis · no real orders</div>
      </div>
@@ -1046,6 +1046,32 @@ async function pairedLive() {
   return { pfYou: 1.65, pfBot: 0.57, n, target: 20, last };
 }
 
+/* ---------------- independent card loading (decoupled + retried) ----------------
+   Each shadow card loads and renders on its own, fired in parallel: one
+   card's stalled or failed fetch can no longer blank the cards behind it
+   in a serial await chain. A failed load retries inside the same cycle
+   (~1.5s, then ~4s); if it still fails, the card body says so instead of
+   sitting empty, and the next slowCycle tries again (failures are never
+   written into the success caches, so nothing latches blank). */
+const cardSleep = ms => new Promise(r => setTimeout(r, ms));
+async function loadCard(liveFn, renderFn, okFn, failId, bustFn) {
+  let v = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) { if (bustFn) bustFn(); await cardSleep(attempt === 1 ? 1500 : 2500); }
+    try { v = await liveFn(); } catch (e) { v = null; }
+    try { renderFn(v); } catch (e) { console.error('lab card render', e); }
+    if (v && (!okFn || okFn(v))) return;
+  }
+  const n = failId && el(failId);
+  if (n && !n.innerHTML) n.innerHTML = '<div style="color:var(--lfaint);font-size:9px">couldn\'t load — will retry</div>';
+}
+function loadShadowCards() {
+  loadCard(shadowLive, renderShadow, v => v.live, 'shOpen', () => { shadowC = { v: null, ts: 0 }; });
+  loadCard(devwatchLive, renderWallets, null, 'dwRows');
+  loadCard(ratchetLive, renderRatchet, null, 'rjRows');
+  loadCard(resignalsLive, renderResignals, null, 'rsAgg');
+  loadCard(calloutsLive, renderCallouts, null, 'coRows');
+}
 /* ---------------- shadow trades (trade-grade shadow) ----------------
    The bot endpoint ships with the NEXT bot build — until /shadowtrades
    answers 200 the panel renders its shell with a NOT LIVE YET tag and no
@@ -1427,11 +1453,7 @@ async function slowCycle() {
     const base = await baselineLive();
     renderExperiments(exps, base);
     renderStatic(await pairedLive(), await feesLive(), await metaLive());
-    renderShadow(await shadowLive());
-    renderWallets(await devwatchLive());
-    renderRatchet(await ratchetLive());
-    renderResignals(await resignalsLive());
-    renderCallouts(await calloutsLive());
+    loadShadowCards();
     const evs = await deriveEvents();
     pushEvents(evs.concat(expEvents(exps, base)));
     saveEv();
@@ -1458,6 +1480,7 @@ window.LabStart = async function () {
     saveEv();
     renderLanes(); renderEvents();
   } catch (e) { console.error('lab init', e); }
+  loadShadowCards();
   setSpeed('live');
   setInterval(slowCycle, 30000);
 };
