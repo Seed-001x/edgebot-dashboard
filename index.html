@@ -226,6 +226,10 @@ h2 .n{font-weight:500;color:var(--faint)}
 .repcard.open .mbody{display:block}
 .repcard .mtag{font:500 12px var(--body);color:var(--dim);margin-left:8px}
 .fb{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid var(--rule2);font-size:13px;color:var(--dim)}
+.fbnote{margin-top:10px;padding-top:10px;border-top:1px solid var(--rule2);display:flex;flex-direction:column;gap:8px}
+.fbnote textarea{background:var(--panel2);border:1px solid var(--rule);border-radius:10px;color:var(--text);padding:10px;font:14px/1.45 var(--body);resize:vertical;min-height:46px;width:100%;box-sizing:border-box}
+.fbnote textarea:focus{outline:none;border-color:var(--uv)}
+.fbnote .btn{align-self:flex-end}
 .fb div{display:flex;gap:8px}
 .fb button{width:42px;height:36px;border-radius:10px;border:1px solid var(--rule);background:var(--panel2);font-size:16px;font-weight:700}
 .fb .ok:hover{border-color:var(--gain);color:var(--gain)} .fb .x:hover{border-color:var(--loss);color:var(--loss)}
@@ -378,7 +382,7 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
 
   <!-- SIGNALS -->
   <section class="view" id="v-signals">
-    <h2><span class="seg" id="sigSeg"><button data-f="all" aria-pressed="true">All</button><button data-f="taken" aria-pressed="false">Taken</button><button data-f="skipped" aria-pressed="false">Skipped</button></span><span class="n" id="sigN"></span></h2>
+    <h2><span class="seg" id="sigSeg"><button data-f="all" aria-pressed="true">All</button><button data-f="taken" aria-pressed="false">Taken</button><button data-f="skipped" aria-pressed="false">Skipped</button><button data-f="answered" aria-pressed="false">Answered</button></span><span class="n" id="sigN"></span></h2>
     <div class="stack grid2" id="signals"></div>
   </section>
 
@@ -536,6 +540,7 @@ async function tagExit(id, reason, btn) {
 }
 document.addEventListener('click', e => {
   const f = e.target.closest('[data-fb]'); if (f) return feedback(f);
+  const ns = e.target.closest('[data-notesave]'); if (ns) return saveNote(ns);
   const mt = e.target.closest('[data-mtoggle]'); if (mt) { const id = mt.dataset.mtoggle; if (MAN_OPEN.has(id)) MAN_OPEN.delete(id); else MAN_OPEN.add(id); const card = mt.closest('.mancard'); if (card) card.classList.toggle('open'); return; }
   const st = e.target.closest('[data-sectoggle]'); if (st) { const sec = document.getElementById(st.dataset.sectoggle); if (sec) sec.classList.toggle('open'); return; }
   const t = e.target.closest('[data-tag]'); if (t) return tagExit(t.dataset.id, t.dataset.tag, t);
@@ -746,6 +751,7 @@ function afterLine(a) {
 
 /* ---------- render: SIGNALS ---------- */
 function renderSignals() {
+  if (sigFilter === 'answered') return renderAnswers();
   const all = (DATA.signals || []).filter(x => !reacted[x.id || x.mint]);
   const s = all.filter(x => sigFilter === 'all' || x.decision === sigFilter).slice(0, 30);
   $('sigN').textContent = s.length + ' shown';
@@ -762,6 +768,50 @@ function renderSignals() {
 
 
 
+/* ---------- render: ANSWERED (signals the user marked, with his "why" notes) ---------- */
+let ANSWERS = null;
+const rpct = v => v == null ? '—' : (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + '%';
+async function loadAnswers() {
+  try { const r = await get('/feedback'); ANSWERS = (r && r.feedback) || []; } catch { if (!ANSWERS) ANSWERS = []; }
+  if (view === 'signals' && sigFilter === 'answered') renderAnswers();
+}
+function answersBusy() {
+  const a = document.activeElement;
+  if (a && a.matches && a.matches('textarea[data-note]')) return true;
+  let dirty = false;
+  document.querySelectorAll('textarea[data-note]').forEach(t => { if (t.value !== (t.dataset.saved || '')) dirty = true; });
+  return dirty;
+}
+function renderAnswers() {
+  if (!ANSWERS) { $('sigN').textContent = ''; $('signals').innerHTML = empty('Loading your answers', 'Pulling every signal you have marked…'); loadAnswers(); return; }
+  if (answersBusy()) return; // never clobber a note being typed on the 8s refresh
+  $('sigN').textContent = ANSWERS.length + ' answered';
+  $('signals').innerHTML = ANSWERS.length ? ANSWERS.map(f => {
+    const s = f.signal, dec = s ? s.decision : null;
+    const mark = dec === 'taken' ? (f.good ? 'You backed it' : 'Bad setup — avoid') : f.good ? '✗ Good coin — missed it' : '✓ Correct skip';
+    const ctx = s ? `${esc(s.setup || '')}, ${dec === 'taken' ? 'bought' : dec === 'shadow' ? 'shadow signal' : 'skipped'} at ${money(s.mc)}${s.ts ? ', ' + ago(s.ts) : ''}` : 'signal no longer in the journal window';
+    const out = s && s.out ? (s.out.done ? `Outcome: 60m ${rpct(s.out.r60)}, peak ${rpct(s.out.maxRet)}${s.out.partial ? ' (partial tracking)' : ''}` : 'Outcome: still tracking…') : '';
+    return `<div class="card item"><div class="row1"><span class="sym" style="font-size:18px"><a href="${chartUrl(f.mint)}" target="_blank" rel="noopener">${esc(f.symbol || (s && s.symbol) || '?')}</a></span><span class="tag ${esc(dec || 'skipped')}">${mark}</span></div>
+      <div class="why">${ctx}</div>
+      ${out ? `<div class="mono">${out}</div>` : ''}
+      <div class="mono">You answered ${ago(f.ts)}</div>
+      <div class="fbnote"><textarea data-note data-saved="${esc(f.note || '')}" maxlength="500" rows="2" placeholder="Why did you answer this way? e.g. great coin — we needed the signal much earlier">${esc(f.note || '')}</textarea>
+      <button class="btn ghost" data-notesave data-key="${esc(f.key)}">Save note</button></div></div>`;
+  }).join('') : empty('No answers yet', 'When you mark a signal ✓ or ✗ on the Signals list, it lands here — and you can write down why you called it that way.');
+}
+async function saveNote(btn) {
+  const card = btn.closest('.card'); const ta = card && card.querySelector('textarea[data-note]');
+  if (!ta) return;
+  btn.disabled = true;
+  try {
+    const r = await apiPost('/feedback/note', { key: btn.dataset.key, note: ta.value });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    ta.dataset.saved = ta.value.trim();
+    const f = (ANSWERS || []).find(x => x.key === btn.dataset.key); if (f) f.note = ta.value.trim() || null;
+    flash('Note saved.');
+  } catch (e) { btn.disabled = false; flash('Note did not save: ' + e.message); }
+}
+
 /* ---------- load ---------- */
 let failures = 0;
 async function load() {
@@ -777,6 +827,7 @@ async function load() {
   failures = 0; OFFLINE = false; $('banner').classList.remove('on');
   DATA = { state: val(state), report: val(report) || {}, signals: val(signals) || [], trades: val(trades) || [], learn: val(learn) || { recent: [], report: {} }, postexit: val(postexit) || { pending: [], done: [] } };
   renderNow(); renderTrades(); renderSignals();
+  if (sigFilter === 'answered') loadAnswers();
 }
 if (!['now','trades','signals','lab'].includes(view)) view = 'now'; setView(view); load(); setInterval(load, REFRESH_MS);
 </script>
