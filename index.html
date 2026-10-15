@@ -725,6 +725,13 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-swRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">record-only — structure is observed, never traded · promotion is your call</div>
      </div>
+     <div class="lb-box" style="border-color:rgba(255,107,107,.35)">
+      <div class="lb-title" style="font-size:9px"><span>DEAD-ENTRY VETO · shadow</span><small id="lab-deTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">every pop signal is stamped with its own 5m volume + buy velocity — would a veto at $15K / $17.5K / $20K / $25K (or under 30 buys/min) have blocked it? Vetoed vs passed, split into time halves. The whole curve is shadowed because the in-sample $17.5K line flipped sign against $15K.</div>
+      <div id="lab-deRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
+      <div style="color:var(--lfaint);font-size:8px" id="lab-deBasis"></div>
+      <div style="color:var(--lfaint);font-size:8px">record-only — nothing gates on these stamps · judged at ≥300 vetoed + ≥14 days · promotion is your call</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(69,224,154,.35)">
       <div class="lb-title" style="font-size:9px"><span>SHADOW TRADES</span><small id="lab-shTag"></small></div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">
@@ -1351,6 +1358,7 @@ function loadShadowCards() {
   loadCard(calloutsLive, renderCallouts, null, 'coRows');
   loadCard(flowExitsLive, renderFlowExits, null, 'feRows');
   loadCard(structureLive, renderStructure, null, 'swRows');
+  loadCard(deadEntryLive, renderDeadEntry, null, 'deRows');
 }
 /* ---------------- shadow trades (trade-grade shadow) ----------------
    The bot endpoint ships with the NEXT bot build — until /shadowtrades
@@ -1704,6 +1712,35 @@ function renderFlowExits(r) {
     const tail = e.botOpen ? ' · bot still in' : ` · bot PnL <span style="color:${sgn(e.botPnlSol)};font-weight:700">${sol(e.botPnlSol)}</span> · Δ <span style="color:${sgn(e.deltaSol)};font-weight:700">${sol(e.deltaSol)}</span>`;
     return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> ${escL(e.wallet || '')} ${chip} · held ${dur(e.heldSec)} · bot <span style="color:${sgn(e.botMovePct)};font-weight:700">${pct(e.botMovePct)}</span>${tail}</div>`;
   }).join('') || `<div class="lb-row" style="color:#8a93bf">no wallet exits recorded yet</div>`;
+}
+/* ---------------- dead-entry veto study: /deadentry ----------------
+   All return values from the endpoint are FRACTIONS (0.5 = +50%), the
+   /resignals convention — pct()/shp() below multiply out. */
+let deC = { v: null, ts: 0 };
+async function deadEntryLive() {
+  if (deC.v && Date.now() - deC.ts < 30000) return deC.v;
+  const v = await get('/deadentry').catch(() => null);
+  if (v && v.thresholds) deC = { v, ts: Date.now() };
+  return (v && v.thresholds) ? v : null;
+}
+function renderDeadEntry(r) {
+  const tag = el('deTag'), rows = el('deRows'), basis = el('deBasis');
+  if (!tag || !rows) return;
+  if (!r) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; if (basis) basis.textContent = ''; return; }
+  const pct = x => x == null ? '—' : (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%';
+  const shp = x => x == null ? '—' : (x * 100).toFixed(0) + '%';
+  const usd = x => x == null ? '—' : '$' + (x >= 1000 ? (x / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : Math.round(x));
+  const sgn = x => x == null ? 'var(--lbright)' : x > 0 ? C.green : x < 0 ? C.red : 'var(--lbright)';
+  const st = r.status || {}, pr = st.progress || {}, bar = st.bar || {};
+  tag.textContent = st.ready ? 'READY' : `COLLECTING · vetoed ${pr.vetoedSignals ?? 0}/${bar.vetoedSignals ?? 300} · ${pr.days ?? 0}d/${bar.days ?? 14}d`;
+  const setTxt = s => `n=${s.n ?? 0} (scored ${s.scored ?? 0}) · med r60 <span style="color:${sgn(s.medianR60)};font-weight:700">${pct(s.medianR60)}</span> · peaked ≥+50% <span style="color:${C.bright};font-weight:700">${shp(s.sharePeak50)}</span>`;
+  const halfTxt = h => h && h.length === 2 ? ` · halves vetoed r60 <span style="color:${sgn(h[0].vetoed.medianR60)};font-weight:700">${pct(h[0].vetoed.medianR60)}</span> / <span style="color:${sgn(h[1].vetoed.medianR60)};font-weight:700">${pct(h[1].vetoed.medianR60)}</span>` : '';
+  const ruleRow = (label, s) => `<div class="lb-row" style="color:#8a93bf">${label} — vetoed ${setTxt(s.vetoed || {})} · passed ${setTxt(s.passed || {})}${s.unknown ? ` · unknown ${s.unknown}` : ''}${halfTxt(s.halves)}</div>`;
+  rows.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf">stamped pop signals <span style="color:${C.bright};font-weight:700">${r.stampedPopSignals || 0}</span>${r.fastPopSignals ? ` · fast-pop <span style="color:${C.bright};font-weight:700">${r.fastPopSignals}</span>` : ''} · outcomes pending <span style="color:${C.bright};font-weight:700">${r.pendingOutcomes || 0}</span> · unknown vol <span style="color:${C.bright};font-weight:700">${r.unknownVol || 0}</span></div>` +
+    (r.thresholds || []).map(t => ruleRow(`veto volM5 &lt; ${usd(t.threshold)}`, t)).join('') +
+    (r.buyVelRule ? ruleRow(`veto buyVel &lt; ${r.buyVelRule.line}/min`, r.buyVelRule) : '');
+  if (basis) basis.textContent = st.basis || '';
 }
 /* ---------------- structure watch: /structurewatch ----------------
    All return values from the endpoint are FRACTIONS (0.5 = +50%), the
