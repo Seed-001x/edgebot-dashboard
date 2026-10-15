@@ -458,6 +458,13 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div style="color:var(--lfaint);font-size:8px" id="lab-coBasis"></div>
       <div style="color:var(--lfaint);font-size:8px">live callouts are off — these are would-calls, record-only · promotion is your call</div>
      </div>
+     <div class="lb-box" style="border-color:rgba(90,216,255,.35)">
+      <div class="lb-title" style="font-size:9px"><span>FLOW EXITS · shadow</span><small id="lab-feTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">watches the wallet whose buy took the bot in — records when it trims or exits, and whether following it out would have beaten the bot's own exit.</div>
+      <div id="lab-feRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
+      <div id="lab-feRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px">record-only — the bot never exits on a wallet's move · promotion is your call</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(69,224,154,.35)">
       <div class="lb-title" style="font-size:9px"><span>SHADOW TRADES</span><small id="lab-shTag"></small></div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">
@@ -1071,6 +1078,7 @@ function loadShadowCards() {
   loadCard(ratchetLive, renderRatchet, null, 'rjRows');
   loadCard(resignalsLive, renderResignals, null, 'rsAgg');
   loadCard(calloutsLive, renderCallouts, null, 'coRows');
+  loadCard(flowExitsLive, renderFlowExits, null, 'feRows');
 }
 /* ---------------- shadow trades (trade-grade shadow) ----------------
    The bot endpoint ships with the NEXT bot build — until /shadowtrades
@@ -1393,6 +1401,37 @@ function renderCallouts(r) {
     return `<div class="lb-row" style="color:#8a93bf">${escL(e.ts ? ago(e.ts) : '')} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> ${escL(CO_TRIG[e.trigger] || e.trigger || '')}${e.holding ? ' · held' : ''} · ${out}${th}</div>`;
   }).join('') || `<div class="lb-row" style="color:#8a93bf">no would-calls yet</div>`;
   bs.textContent = trigs.length ? ((r.perTrigger[trigs[0]] || {}).readyBasis || '') : '';
+}
+/* ---------------- flow-exit watcher: /flowexits ---------------- */
+let feC = { v: null, ts: 0 };
+async function flowExitsLive() {
+  if (feC.v && Date.now() - feC.ts < 30000) return feC.v;
+  const v = await get('/flowexits').catch(() => null);
+  if (v && v.walletFirst) feC = { v, ts: Date.now() };
+  return (v && v.walletFirst) ? v : null;
+}
+function renderFlowExits(r) {
+  const tag = el('feTag'), rows = el('feRows'), recEl = el('feRecent');
+  if (!tag || !rows) return;
+  if (!r) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; recEl.innerHTML = ''; return; }
+  const sol = x => x == null ? '—' : (x >= 0 ? '+' : '') + x.toFixed(4);
+  const pct = x => x == null ? '—' : (x >= 0 ? '+' : '') + x.toFixed(1) + '%';
+  const shp = x => x == null ? '—' : (x * 100).toFixed(0) + '%';
+  const sgn = x => x == null ? 'var(--lbright)' : x > 0 ? C.green : x < 0 ? C.red : 'var(--lbright)';
+  const dur = s => { if (s == null) return '—'; s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60; return h > 0 ? `${h}:${String(m).padStart(2, '0')}` : `${m}:${String(ss).padStart(2, '0')}`; };
+  const edt = ts => new Date(ts).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit' });
+  const wf = r.walletFirst || {}, bp = r.botPnlWalletFirst || {}, cf = r.counterfactual || {};
+  tag.textContent = r.ready ? `WALLET-FIRST n=${wf.n || 0}` : 'COLLECTING';
+  rows.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf">positions watched <span style="color:${C.bright};font-weight:700">${r.watched || 0}</span> · watching now <span style="color:${C.bright};font-weight:700">${r.watching || 0}</span> · events <span style="color:${C.bright};font-weight:700">${r.events || 0}</span></div>` +
+    `<div class="lb-row" style="color:#8a93bf">wallet exited first <span style="color:${C.bright};font-weight:700">${wf.n || 0}</span> (${shp(wf.share)}) · median wallet hold <span style="color:${C.bright};font-weight:700">${dur(r.medianWalletHoldSec)}</span></div>` +
+    `<div class="lb-row" style="color:#8a93bf">bot PnL on wallet-first positions <span style="color:${sgn(bp.totalSol)};font-weight:700">${sol(bp.totalSol)} SOL</span>${bp.n ? ` · median <span style="color:${sgn(bp.medianSol)};font-weight:700">${sol(bp.medianSol)} SOL</span>` : ''}</div>` +
+    `<div class="lb-row" style="color:#8a93bf">exiting with them would have changed PnL by ${cf.n ? `<span style="color:${sgn(cf.totalDeltaSol)};font-weight:700">${sol(cf.totalDeltaSol)} SOL</span> · median <span style="color:${sgn(cf.medianDeltaSol)};font-weight:700">${sol(cf.medianDeltaSol)} SOL</span>` : '—'}</div>`;
+  recEl.innerHTML = (r.recent || []).slice(0, 8).map(e => {
+    const chip = e.kind === 'exit' ? `<span style="color:${C.red};font-weight:800">EXIT</span>` : `<span style="color:${C.amber};font-weight:800">TRIM</span>`;
+    const tail = e.botOpen ? ' · bot still in' : ` · bot PnL <span style="color:${sgn(e.botPnlSol)};font-weight:700">${sol(e.botPnlSol)}</span> · Δ <span style="color:${sgn(e.deltaSol)};font-weight:700">${sol(e.deltaSol)}</span>`;
+    return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> ${escL(e.wallet || '')} ${chip} · held ${dur(e.heldSec)} · bot <span style="color:${sgn(e.botMovePct)};font-weight:700">${pct(e.botMovePct)}</span>${tail}</div>`;
+  }).join('') || `<div class="lb-row" style="color:#8a93bf">no wallet exits recorded yet</div>`;
 }
 function renderExperiments(list, base) {
   el('baseline').textContent = `vs taken pops · ${base.runnerPct}% run · ${base.crashPct}% crash`;
