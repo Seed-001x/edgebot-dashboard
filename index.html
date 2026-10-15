@@ -296,7 +296,7 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
 /* ===== DESKTOP FIT (2026-10-15): wide screens use their width; the phone layout below 1024px is untouched ===== */
 @media(min-width:1024px){
   .shell{max-width:1200px;padding-left:24px;padding-right:24px}
-  .scene{max-width:880px}
+  /* no .scene cap here: the class now belongs to the home scene (#scene), which must own the full viewport — capping it exposed the #ds-bg stream background beside the scene (fixed 2026-10-15) */
   #manual{grid-template-columns:1fr 1fr}
   #v-signals>h2,#signals{max-width:1120px;margin-left:auto;margin-right:auto}
   #v-lab .lb-root{max-width:none}
@@ -306,7 +306,7 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
 }
 @media(min-width:1440px){
   .shell{max-width:1320px}
-  .scene{max-width:980px}
+  /* home scene stays uncapped at every width (see the 1024px block note) */
   #v-lab .lb-wrap{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 </style>
