@@ -644,8 +644,10 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
   <section class="view" id="v-scans">
     <div class="rm-title">Scans</div>
     <h2><span class="seg" id="scanSeg"><button data-f="misses" aria-pressed="true">Near misses</button><button data-f="all" aria-pressed="false">All sessions</button></span><span class="n" id="scanN"></span></h2>
+    <div class="card">
     <div class="mono" id="scanTotals" style="margin-bottom:10px"></div>
     <div style="overflow-x:auto"><table id="scanTbl"><thead><tr><th>Coin</th><th>Watched</th><th>First mc</th><th>Peak mc</th><th>Run</th><th>Max vol 5m</th><th>Signaled</th><th>r15</th><th>r60</th></tr></thead><tbody id="scanBody"></tbody></table></div>
+    </div>
     <p class="foot">Every coin the bot scans leaves a session here — signaled or not. Near misses = the biggest runs while watched that never signaled: the study list. r15/r60 = what the coin did in the 15/60 min after the watch ended.</p>
   </section>
 
