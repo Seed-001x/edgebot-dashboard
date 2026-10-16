@@ -704,6 +704,13 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-rjRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px" id="lab-rjKnobs"></div>
      </div>
+     <div class="lb-box" style="border-color:rgba(167,139,250,.35)">
+      <div class="lb-title" style="font-size:9px"><span>SHADOW SELLER · learned judge</span><small id="lab-ssTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">no ladders, no borrowed thresholds — it reads the full position state (peak, drawdown, time since peak, buy-share trend) and judges it against an evidence table built from the bot's own completed exits: what holding vs selling actually paid from states like this one. Its would-sells are scored against what the ladder really did on the same remainder.</div>
+      <div id="lab-ssRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
+      <div id="lab-ssRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px">record-only — the ladder still makes every real exit · ready at 30 paired · promotion is your call</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(255,143,171,.35)">
       <div class="lb-title" style="font-size:9px"><span>ANSWERED RE-SIGNALS · shadow</span><small id="lab-rsTag"></small></div>
       <div style="color:#8a93bf;font-size:9px">coins you already answered, signaling again — how the re-signal did, split by your verdict. The marked signal itself never counts: a re-signal lands 5m+ after it, once per mark, and marking the mint again re-arms it.</div>
@@ -1389,6 +1396,7 @@ function loadShadowCards() {
   loadCard(shadowLive, renderShadow, v => v.live, 'shOpen', () => { shadowC = { v: null, ts: 0 }; });
   loadCard(devwatchLive, renderWallets, null, 'dwRows');
   loadCard(ratchetLive, renderRatchet, null, 'rjRows');
+  loadCard(shadowSellerLive, renderShadowSeller, null, 'ssRows');
   loadCard(resignalsLive, renderResignals, null, 'rsAgg');
   loadCard(calloutsLive, renderCallouts, null, 'coRows');
   loadCard(flowExitsLive, renderFlowExits, null, 'feRows');
@@ -1645,6 +1653,31 @@ function renderRatchet(r) {
   }).join('');
   kn.textContent = `judge every ${kb.evalMs}ms · VWAP ${kb.vwapSec}s · flow ${kb.flowWindowSec}s · sells ≥${Math.round((kb.flowSellShare || 0) * 100)}% & ≥${kb.flowMinSellSol} SOL · arm +${Math.round((kb.beArmPct || 0) * 100)}% / trigger +${Math.round((kb.beTriggerPct || 0) * 100)}% · aggregates over the last ${r.journalRecords || 0} journal records`;
 }
+/* ---------------- shadow seller (learned exit judge): /shadowseller ---------------- */
+let ssC = { v: null, ts: 0 };
+async function shadowSellerLive() {
+  if (ssC.v && Date.now() - ssC.ts < 30000) return ssC.v;
+  const v = await get('/shadowseller').catch(() => null);
+  if (v && v.totals) ssC = { v, ts: Date.now() };
+  return (v && v.totals) ? v : null;
+}
+function renderShadowSeller(r) {
+  const tag = el('ssTag'), rows = el('ssRows'), recEl = el('ssRecent');
+  if (!tag || !rows || !recEl) return;
+  if (!r || r.enabled === false) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; recEl.innerHTML = ''; return; }
+  const t = r.totals || {};
+  tag.textContent = r.ready ? 'READY · 30+ paired' : 'COLLECTING';
+  const sol = x => x == null ? '—' : (x >= 0 ? '+' : '') + (+x).toFixed(4);
+  const wr = t.paired ? Math.round(100 * (t.shadowWins || 0) / t.paired) : null;
+  rows.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf">would-sells <span style="color:${C.bright};font-weight:700">${t.fires || 0}</span> · paired <span style="color:${C.bright};font-weight:700">${t.paired || 0}</span> · shadow wins <span style="color:${C.bright};font-weight:700">${t.shadowWins || 0}${wr != null ? ` (${wr}%)` : ''}</span> · delta vs ladder <span style="color:${(t.deltaSol || 0) >= 0 ? C.green : C.red};font-weight:700">${sol(t.deltaSol)} SOL</span></div>` +
+    ((t.fires || 0) > (t.paired || 0) ? `<div class="lb-row" style="color:#8a93bf">${(t.fires || 0) - (t.paired || 0)} fired on still-open positions — pairs when they close</div>` : '');
+  recEl.innerHTML = (r.recent || []).slice(0, 8).map(e => {
+    const d = e.deltaSol;
+    return `<div class="lb-row" style="color:#8a93bf">${escL(e.ts ? ago(e.ts) : '')} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> fired at ${e.ratioAtFire != null ? (+e.ratioAtFire).toFixed(2) + '×' : '—'} (peak ${e.peakRatioAtFire != null ? (+e.peakRatioAtFire).toFixed(2) + '×' : '—'}) · shadow ${sol(e.shadowNet)} vs ladder ${sol(e.holdNet)} · <span style="color:${d >= 0 ? C.green : C.red};font-weight:700">${sol(d)}</span>${e.exitReason ? ` · ${escL(e.exitReason)}` : ''}</div>`;
+  }).join('');
+}
+
 /* ---------------- answered re-signals: /resignals ---------------- */
 let rsC = { v: null, ts: 0 }, rsTab = 'all';
 async function resignalsLive() {
