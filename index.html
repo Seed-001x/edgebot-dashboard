@@ -752,6 +752,13 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-stRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">record-only — a signal in name and tracking only; nothing buys on it · ready at 30 finalized · promotion is your call</div>
      </div>
+     <div class="lb-box" style="border-color:rgba(94,234,212,.35)">
+      <div class="lb-title" style="font-size:9px"><span>CONFLUENCE SIGNAL · shadow</span><small id="lab-csTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">every confluence fire (≥2 survivor entities buying one mint in 5m) as a pair of virtual positions stamped at DETECTION time on a 0.05 SOL shadow stake — SCALP sells 100% at the first +20% net check; LADDER runs the live exit stack. The candle journal measured the peak from blockTime; this measures what a tradable entry would actually have kept.</div>
+      <div id="lab-csRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
+      <div id="lab-csRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px">record-only — detection-time entries, view-quote basis · ready at 50 closes per profile · promotion is your call</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(255,107,107,.35)">
       <div class="lb-title" style="font-size:9px"><span>DEAD-ENTRY VETO · shadow</span><small id="lab-deTag"></small></div>
       <div style="color:#8a93bf;font-size:9px">every pop signal is stamped with its own 5m volume + buy velocity — would a veto at $15K / $17.5K / $20K / $25K (or under 30 buys/min) have blocked it? Vetoed vs passed, split into time halves. The whole curve is shadowed because the in-sample $17.5K line flipped sign against $15K.</div>
@@ -1410,6 +1417,7 @@ function loadShadowCards() {
   loadCard(flowExitsLive, renderFlowExits, null, 'feRows');
   loadCard(structureLive, renderStructure, null, 'swRows');
   loadCard(staircaseLive, renderStaircase, null, 'stRows');
+  loadCard(confluenceSignalLive, renderConfluenceSignal, null, 'csRows');
   loadCard(deadEntryLive, renderDeadEntry, null, 'deRows');
 }
 /* ---------------- shadow trades (trade-grade shadow) ----------------
@@ -1889,6 +1897,40 @@ function renderStaircase(r) {
     const out = (!s || (s.r60 == null && s.peakPct == null)) ? 'tracking…' : `peak <span style="color:${sgn(s.peakPct)};font-weight:700">${pct(s.peakPct)}</span> · r60 <span style="color:${sgn(s.r60)};font-weight:700">${pct(s.r60)}</span>${s.final ? ' · final' : ''}`;
     return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> <span style="color:${C.orange};font-weight:800">HL${e.ordinal || '?'}</span> · ${out}</div>`;
   }).join('') || `<div class="lb-row" style="color:#8a93bf">no staircase-3 signals yet — the next 3rd higher low on any watched coin lands here</div>`;
+}
+/* ---------------- confluence shadow signal: /confluencesignal ----------------
+   PnL values from this endpoint are PERCENT already (+24 = +24%) and SOL —
+   not the fraction convention of /staircase. Each fire runs two virtual
+   positions (SCALP / LADDER) stamped at detection time. */
+let csC = { v: null, ts: 0 };
+async function confluenceSignalLive() {
+  if (csC.v && Date.now() - csC.ts < 30000) return csC.v;
+  const v = await get('/confluencesignal').catch(() => null);
+  if (v && v.profiles) csC = { v, ts: Date.now() };
+  return (v && v.profiles) ? v : null;
+}
+function renderConfluenceSignal(r) {
+  const tag = el('csTag'), rows = el('csRows'), recEl = el('csRecent');
+  if (!tag || !rows || !recEl) return;
+  if (!r || r.enabled === false) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; recEl.innerHTML = ''; return; }
+  const sol = x => x == null ? '—' : (x >= 0 ? '+' : '') + (+x).toFixed(4);
+  const pp = x => x == null ? '—' : (x >= 0 ? '+' : '') + (+x).toFixed(1) + '%';
+  const shp = x => x == null ? '—' : Math.round(x * 100) + '%';
+  const sgn = x => x == null ? 'var(--lbright)' : x > 0 ? C.green : x < 0 ? C.red : 'var(--lbright)';
+  const edt = ts => new Date(ts).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit' });
+  const P = r.profiles || {}, S = P.scalp || {}, L = P.ladder || {};
+  tag.textContent = r.ready ? `READY · ${r.readyN || 50}+ CLOSES / PROFILE` : 'COLLECTING';
+  const prof = (code, a, col, extra) => `<div class="lb-row" style="color:#8a93bf"><span style="color:${col};font-weight:800">${code}</span> closed <span style="color:${C.bright};font-weight:700">${a.closed || 0}</span> · open ${a.open || 0} · wins ${a.wins || 0}${a.winRate != null ? ` (${shp(a.winRate)})` : ''} · med <span style="color:${sgn(a.medianPnlPct)};font-weight:700">${pp(a.medianPnlPct)}</span> · mean <span style="color:${sgn(a.meanPnlPct)};font-weight:700">${pp(a.meanPnlPct)}</span> · net <span style="color:${sgn(a.netPnlSol)};font-weight:700">${sol(a.netPnlSol)} SOL</span>${extra || ''}</div>`;
+  const ttt = S.medianTimeToTouchSec == null ? '—' : S.medianTimeToTouchSec >= 60 ? (S.medianTimeToTouchSec / 60).toFixed(1) + 'm' : Math.round(S.medianTimeToTouchSec) + 's';
+  rows.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf">fires <span style="color:${C.bright};font-weight:700">${r.fires || 0}</span> · no-view <span style="color:${C.bright};font-weight:700">${r.noView || 0}</span>${r.noViewRate != null ? ` (${shp(r.noViewRate)})` : ''} · stake ${(r.rules && r.rules.stakeSol) || 0.05} SOL · entries at detection</div>` +
+    prof('SCALP', S, C.teal || C.cyan, ` · touch +${Math.round(((r.rules && r.rules.scalpPct) || 0.2) * 100)}% <span style="color:${C.bright};font-weight:700">${shp(S.touchRate)}</span> · med time-to-touch <span style="color:${C.bright};font-weight:700">${ttt}</span>`) +
+    prof('LADDER', L, C.amber, ` · saw +20% <span style="color:${C.bright};font-weight:700">${shp(L.touched20Share)}</span>`);
+  recEl.innerHTML = (r.recentCloses || []).slice(0, 8).map(e => {
+    const who = e.names && e.names.length ? ` · ${escL(e.names.join(' + '))}` : '';
+    const lag = e.lagSec != null ? ` · lag ${e.lagSec >= 60 ? (e.lagSec / 60).toFixed(1) + 'm' : Math.round(e.lagSec) + 's'}` : '';
+    return `<div class="lb-row" style="color:#8a93bf">${e.exitTs ? edt(e.exitTs) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> <span style="color:${e.profile === 'scalp' ? (C.teal || C.cyan) : C.amber};font-weight:800">${e.profile === 'scalp' ? 'SCALP' : 'LADDER'}</span> · <span style="color:${sgn(e.pnlPct)};font-weight:700">${pp(e.pnlPct)}</span> (${sol(e.pnlSol)}) · ${escL(e.status === 'expired' ? 'expired 4h' : (e.exitReason || 'closed'))} · held ${e.heldMin != null ? (+e.heldMin).toFixed(0) + 'm' : '—'}${who}${lag}</div>`;
+  }).join('') || `<div class="lb-row" style="color:#8a93bf">no closes yet — the next confluence fire opens the first pair</div>`;
 }
 function renderExperiments(list, base) {
   el('baseline').textContent = `vs taken pops · ${base.runnerPct}% run · ${base.crashPct}% crash`;
