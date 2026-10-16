@@ -744,6 +744,14 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-swRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">record-only — structure is observed, never traded · promotion is your call</div>
      </div>
+     <div class="lb-box" style="border-color:rgba(255,170,0,.35)">
+      <div class="lb-title" style="font-size:9px"><span>STAIRCASE-3 SIGNAL · shadow</span><small id="lab-stTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">the structure study's headline pattern as its own signal: a coin's 3rd-or-later confirmed higher low. In the study (154 finalized marks) the median forward peak was +208% and 67.5% ran at least +50% — but the median coin round-tripped by 1h, so this judges the peak, not the hold.</div>
+      <div id="lab-stRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
+      <div id="lab-stAgg" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div id="lab-stRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px">record-only — a signal in name and tracking only; nothing buys on it · ready at 30 finalized · promotion is your call</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(255,107,107,.35)">
       <div class="lb-title" style="font-size:9px"><span>DEAD-ENTRY VETO · shadow</span><small id="lab-deTag"></small></div>
       <div style="color:#8a93bf;font-size:9px">every pop signal is stamped with its own 5m volume + buy velocity — would a veto at $15K / $17.5K / $20K / $25K (or under 30 buys/min) have blocked it? Vetoed vs passed, split into time halves. The whole curve is shadowed because the in-sample $17.5K line flipped sign against $15K.</div>
@@ -1401,6 +1409,7 @@ function loadShadowCards() {
   loadCard(calloutsLive, renderCallouts, null, 'coRows');
   loadCard(flowExitsLive, renderFlowExits, null, 'feRows');
   loadCard(structureLive, renderStructure, null, 'swRows');
+  loadCard(staircaseLive, renderStaircase, null, 'stRows');
   loadCard(deadEntryLive, renderDeadEntry, null, 'deRows');
 }
 /* ---------------- shadow trades (trade-grade shadow) ----------------
@@ -1845,6 +1854,41 @@ function renderStructure(r) {
     const out = (e.r60 == null && e.peakPct == null) ? 'tracking…' : `r60 <span style="color:${sgn(e.r60)};font-weight:700">${pct(e.r60)}</span> · peak <span style="color:${sgn(e.peakPct)};font-weight:700">${pct(e.peakPct)}</span>`;
     return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> ${chip} · holders <span style="color:${sgn(e.holderGrowthPct)};font-weight:700">${pct(e.holderGrowthPct)}</span> · ${out}</div>`;
   }).join('') || `<div class="lb-row" style="color:#8a93bf">no higher-low marks yet</div>`;
+}
+/* ---------------- staircase-3 shadow signal: /staircase ----------------
+   All return values from the endpoint are FRACTIONS (0.5 = +50%), the
+   /structurewatch convention — pct()/shp() below multiply out. Scores
+   ride nested on each record (record.score), joined server-side from
+   the structure journal. */
+let stC = { v: null, ts: 0 };
+async function staircaseLive() {
+  if (stC.v && Date.now() - stC.ts < 30000) return stC.v;
+  const v = await get('/staircase').catch(() => null);
+  if (v && v.aggregates) stC = { v, ts: Date.now() };
+  return (v && v.aggregates) ? v : null;
+}
+function renderStaircase(r) {
+  const tag = el('stTag'), rows = el('stRows'), agg = el('stAgg'), recEl = el('stRecent');
+  if (!tag || !rows) return;
+  if (!r || r.enabled === false) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; agg.innerHTML = ''; recEl.innerHTML = ''; return; }
+  const pct = x => x == null ? '—' : (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%';
+  const shp = x => x == null ? '—' : (x * 100).toFixed(0) + '%';
+  const sgn = x => x == null ? 'var(--lbright)' : x > 0 ? C.green : x < 0 ? C.red : 'var(--lbright)';
+  const edt = ts => new Date(ts).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit' });
+  const a = r.aggregates || {};
+  tag.textContent = r.ready ? `READY · ${r.finalized || 0} FINALIZED` : 'COLLECTING';
+  rows.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf">signals <span style="color:${C.bright};font-weight:700">${r.signals || 0}</span> · finalized <span style="color:${C.bright};font-weight:700">${r.finalized || 0}</span> · runner share <span style="color:${C.bright};font-weight:700">${shp(a.runnerShare)}</span> · med peak <span style="color:${sgn(a.medianPeak)};font-weight:700">${pct(a.medianPeak)}</span> · med r60 <span style="color:${sgn(a.medianR60)};font-weight:700">${pct(a.medianR60)}</span></div>`;
+  const band = (label, b) => `<div class="lb-row" style="color:#8a93bf"><span style="color:${C.bright};font-weight:700">${label}</span> n <span style="color:${C.bright};font-weight:700">${(b && b.n) || 0}</span> · finalized ${(b && b.finalized) || 0} · runner ${shp(b && b.runnerShare)} · med peak <span style="color:${sgn(b && b.medianPeak)};font-weight:700">${pct(b && b.medianPeak)}</span> · med r60 <span style="color:${sgn(b && b.medianR60)};font-weight:700">${pct(b && b.medianR60)}</span></div>`;
+  const bb = r.byBand || {};
+  agg.innerHTML =
+    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY ORDINAL BAND</div>` +
+    band('HL 3–5 · fresh', bb['3-5']) + band('HL 6+ · deep', bb['6+']);
+  recEl.innerHTML = (r.recent || []).slice(0, 8).map(e => {
+    const s = e.score || null;
+    const out = (!s || (s.r60 == null && s.peakPct == null)) ? 'tracking…' : `peak <span style="color:${sgn(s.peakPct)};font-weight:700">${pct(s.peakPct)}</span> · r60 <span style="color:${sgn(s.r60)};font-weight:700">${pct(s.r60)}</span>${s.final ? ' · final' : ''}`;
+    return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> <span style="color:${C.orange};font-weight:800">HL${e.ordinal || '?'}</span> · ${out}</div>`;
+  }).join('') || `<div class="lb-row" style="color:#8a93bf">no staircase-3 signals yet — the next 3rd higher low on any watched coin lands here</div>`;
 }
 function renderExperiments(list, base) {
   el('baseline').textContent = `vs taken pops · ${base.runnerPct}% run · ${base.crashPct}% crash`;
