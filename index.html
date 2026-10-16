@@ -546,6 +546,7 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
     <button role="tab" data-v="now" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Now</button>
     <button role="tab" data-v="trades" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Trades</button>
     <button role="tab" data-v="signals" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M7.5 7.5a6.4 6.4 0 0 0 0 9M16.5 7.5a6.4 6.4 0 0 1 0 9M4.5 4.5a10.6 10.6 0 0 0 0 15M19.5 4.5a10.6 10.6 0 0 1 0 15"/></svg>Signals</button>
+    <button role="tab" data-v="scans" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M3 12h18"/></svg>Scans</button>
     <button role="tab" data-v="lab" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v5.5L5.6 18a2.4 2.4 0 0 0 2.1 3.5h8.6a2.4 2.4 0 0 0 2.1-3.5L14 8.5V3"/><path d="M7.5 15h9"/></svg>LAB</button>
   </nav>
 
@@ -637,6 +638,15 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
     <div class="rm-title">Signals</div>
     <h2><span class="seg" id="sigSeg"><button data-f="all" aria-pressed="true">All</button><button data-f="taken" aria-pressed="false">Taken</button><button data-f="skipped" aria-pressed="false">Skipped</button><button data-f="answered" aria-pressed="false">Answered</button></span><span class="n" id="sigN"></span></h2>
     <div class="stack grid2" id="signals"></div>
+  </section>
+
+  <!-- SCANS -->
+  <section class="view" id="v-scans">
+    <div class="rm-title">Scans</div>
+    <h2><span class="seg" id="scanSeg"><button data-f="misses" aria-pressed="true">Near misses</button><button data-f="all" aria-pressed="false">All sessions</button></span><span class="n" id="scanN"></span></h2>
+    <div class="mono" id="scanTotals" style="margin-bottom:10px"></div>
+    <div style="overflow-x:auto"><table id="scanTbl"><thead><tr><th>Coin</th><th>Watched</th><th>First mc</th><th>Peak mc</th><th>Run</th><th>Max vol 5m</th><th>Signaled</th><th>r15</th><th>r60</th></tr></thead><tbody id="scanBody"></tbody></table></div>
+    <p class="foot">Every coin the bot scans leaves a session here — signaled or not. Near misses = the biggest runs while watched that never signaled: the study list. r15/r60 = what the coin did in the 15/60 min after the watch ended.</p>
   </section>
 
   <!-- LAB -->
@@ -825,6 +835,8 @@ function setView(v) {
 }
 $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); });
 $('sigSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; sigFilter = b.dataset.f; document.querySelectorAll('#sigSeg button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderSignals(); });
+let scanFilter = 'misses';
+$('scanSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; scanFilter = b.dataset.f; document.querySelectorAll('#scanSeg button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderScans(); });
 
 /* ---------- feedback + tags ---------- */
 async function feedback(btn) {
@@ -1088,6 +1100,27 @@ function renderSignals() {
 
 
 
+/* ---------- render: SCANS (watch-session ledger, record-only) ---------- */
+function renderScans() {
+  const card = DATA.scanledger || {};
+  const t = card.totals || { sessions: 0, signaled: 0, signaledPct: 0 };
+  $('scanTotals').textContent = t.sessions + ' sessions · ' + t.signaled + ' signaled (' + t.signaledPct + '%)';
+  const rows = scanFilter === 'all' ? (card.recent || []) : (card.nearMisses || []);
+  $('scanN').textContent = rows.length + ' shown';
+  const rc = v => v == null ? '' : (v >= 0 ? 'g' : 'r');
+  $('scanBody').innerHTML = rows.length ? rows.map(x => `<tr>
+    <td><a href="${chartUrl(x.mint)}" target="_blank" rel="noopener">${esc(x.symbol || (x.mint || '').slice(0, 6))}</a></td>
+    <td>${x.durMin != null ? x.durMin + ' min' : '—'}</td>
+    <td>${money(x.firstMc)}</td>
+    <td>${money(x.peakMc)}</td>
+    <td>${x.runFromFirst != null ? x.runFromFirst.toFixed(2) + '×' : '—'}</td>
+    <td>${x.maxVolM5 != null ? money(x.maxVolM5) : '—'}</td>
+    <td>${x.signaled ? 'Yes' + (x.decisions && x.decisions.length ? ' (' + esc(x.decisions.join(', ')) + ')' : '') : 'No'}</td>
+    <td class="${rc(x.r15)}">${rpct(x.r15)}</td>
+    <td class="${rc(x.r60)}">${rpct(x.r60)}</td></tr>`).join('')
+    : `<tr><td colspan="9">${scanFilter === 'all' ? 'No scan sessions yet — they land here as coins leave the watch.' : 'No near misses yet — sessions that ran while watched land here.'}</td></tr>`;
+}
+
 /* ---------- render: ANSWERED (signals the user marked, with his "why" notes) ---------- */
 let ANSWERS = null;
 const rpct = v => v == null ? '—' : (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + '%';
@@ -1137,7 +1170,7 @@ async function saveNote(btn) {
 let failures = 0;
 async function load() {
   const need = ['state', 'report', 'signals', 'trades'];
-  const [state, report, signals, trades, learn, postexit] = await Promise.allSettled([get('/state'), get('/report'), get('/signals?limit=60'), get('/trades'), get('/learn'), get('/postexit')]);
+  const [state, report, signals, trades, learn, postexit, scanledger] = await Promise.allSettled([get('/state'), get('/report'), get('/signals?limit=60'), get('/trades'), get('/learn'), get('/postexit'), get('/scanledger')]);
   const val = r => r.status === 'fulfilled' ? r.value : null;
   if (!val(state)) {
     failures++;
@@ -1146,11 +1179,11 @@ async function load() {
     $('banner').classList.add('on'); return;
   }
   failures = 0; OFFLINE = false; $('banner').classList.remove('on');
-  DATA = { state: val(state), report: val(report) || {}, signals: val(signals) || [], trades: val(trades) || [], learn: val(learn) || { recent: [], report: {} }, postexit: val(postexit) || { pending: [], done: [] } };
-  renderNow(); renderTrades(); renderSignals();
+  DATA = { state: val(state), report: val(report) || {}, signals: val(signals) || [], trades: val(trades) || [], learn: val(learn) || { recent: [], report: {} }, postexit: val(postexit) || { pending: [], done: [] }, scanledger: val(scanledger) || { totals: { sessions: 0, signaled: 0, signaledPct: 0 }, recent: [], nearMisses: [] } };
+  renderNow(); renderTrades(); renderSignals(); renderScans();
   if (sigFilter === 'answered') loadAnswers();
 }
-if (!['now','trades','signals','lab'].includes(view)) view = 'now'; setView(view); load(); setInterval(load, REFRESH_MS);
+if (!['now','trades','signals','lab','scans'].includes(view)) view = 'now'; setView(view); load(); setInterval(load, REFRESH_MS);
 </script>
 <script>
 /* =====================================================================
