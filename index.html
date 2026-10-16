@@ -872,18 +872,6 @@ async function feedback(btn) {
     const el = btn.closest('.card'); if (el) { el.style.opacity = '0'; el.style.transition = 'opacity .25s'; setTimeout(() => el.remove(), 260); }
   } catch (e) { btn.disabled = false; flash('Feedback did not save: ' + e.message + '. Try again in a moment.'); }
 }
-async function ladderToggle(btn) {
-  const mint = btn.dataset.mint, off = btn.dataset.off === '1';
-  btn.disabled = true;
-  try {
-    const r = await apiPost(off ? '/ladderon' : '/ladderoff', { mint });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const p = ((DATA.state || {}).positions || []).find(x => x.mint === mint);
-    if (p) p.ladderOff = off ? null : Date.now();
-    renderNow();
-    flash(off ? 'SL ladder back ON for this coin.' : 'SL ladder OFF for this coin — the ladder will not sell it. Everything else still judges.');
-  } catch (e) { btn.disabled = false; flash('SL ladder switch did not save: ' + e.message + '. Try again in a moment.'); }
-}
 async function tagExit(id, reason, btn) {
   btn.disabled = true;
   try {
@@ -895,7 +883,6 @@ async function tagExit(id, reason, btn) {
   } catch (e) { btn.disabled = false; flash('Tag did not save: ' + e.message); }
 }
 document.addEventListener('click', e => {
-  const ld = e.target.closest('[data-ladder]'); if (ld) return ladderToggle(ld);
   const f = e.target.closest('[data-fb]'); if (f) return feedback(f);
   const ns = e.target.closest('[data-notesave]'); if (ns) return saveNote(ns);
   const mt = e.target.closest('[data-mtoggle]'); if (mt) { const id = mt.dataset.mtoggle; if (MAN_OPEN.has(id)) MAN_OPEN.delete(id); else MAN_OPEN.add(id); const card = mt.closest('.mancard'); if (card) card.classList.toggle('open'); return; }
@@ -957,7 +944,6 @@ function renderNow() {
       ${p.bundleScore != null ? riskMeter(p.bundleScore, lim) : ''}
       <div class="acts"><button class="btn" data-copy="${esc(p.mint)}">Copy address</button>
       <a class="btn" href="${chartUrl(p.mint)}" target="_blank" rel="noopener">Open chart</a>
-      <button class="btn ${p.ladderOff ? '' : 'ghost'}" data-ladder data-mint="${esc(p.mint)}" data-off="${p.ladderOff ? '1' : '0'}" title="Per-coin switch: while OFF, the SL ladder never arms or sells this coin. Everything else (TP banks, undertaker, moonbag) still judges.">SL Ladder: ${p.ladderOff ? 'OFF' : 'ON'}</button>
       <button class="btn ghost" data-fb data-mint="${esc(p.mint)}" data-symbol="${esc(p.symbol)}" data-good="0" data-sid="${esc(p.id || '')}" data-kind="position">Bad setup, avoid</button></div></div>`;
   }).join('') : empty('No open positions', 'The bot is scanning. A card appears here the moment it buys, with a gauge for stop, entry and take-profit.');
 
