@@ -1931,20 +1931,24 @@ function renderBottom(r) {
   const a = r.aggregates || {};
   tag.textContent = r.ready ? `READY · ${r.finalized || 0} FINALIZED` : 'COLLECTING';
   rows.innerHTML =
-    `<div class="lb-row" style="color:#8a93bf">marks <span style="color:${C.bright};font-weight:700">${r.marks || 0}</span> · finalized <span style="color:${C.bright};font-weight:700">${r.finalized || 0}</span> · runner share <span style="color:${C.bright};font-weight:700">${shp(a.runnerShare)}</span> · med peak <span style="color:${sgn(a.medianPeak)};font-weight:700">${pct(a.medianPeak)}</span> · med r60 <span style="color:${sgn(a.medianR60)};font-weight:700">${pct(a.medianR60)}</span></div>` +
-    `<div class="lb-row" style="color:#8a93bf">episodes <span style="color:${C.bright};font-weight:700">${r.episodes || 0}</span> · open now <span style="color:${C.bright};font-weight:700">${r.episodesOpen ?? '—'}</span> · tracking <span style="color:${C.bright};font-weight:700">${r.tracking ?? '—'}</span> coins</div>`;
+    `<div class="lb-row" style="color:#8a93bf">retrace marks <span style="color:${C.bright};font-weight:700">${r.marksQualified ?? r.marks ?? 0}</span> · finalized <span style="color:${C.bright};font-weight:700">${r.finalized || 0}</span> · runner share <span style="color:${C.bright};font-weight:700">${shp(a.runnerShare)}</span> · med peak <span style="color:${sgn(a.medianPeak)};font-weight:700">${pct(a.medianPeak)}</span> · med r60 <span style="color:${sgn(a.medianR60)};font-weight:700">${pct(a.medianR60)}</span></div>` +
+    `<div class="lb-row" style="color:#8a93bf">episodes <span style="color:${C.bright};font-weight:700">${r.episodes || 0}</span> · open now <span style="color:${C.bright};font-weight:700">${r.episodesOpen ?? '—'}</span> · tracking <span style="color:${C.bright};font-weight:700">${r.tracking ?? '—'}</span> coins · dust marks <span style="color:${C.bright};font-weight:700">${r.marksDust || 0}</span> (peak under ${mc$(r.minPeakMc || 25000)} — never ran, no retrace setup)</div>`;
   const grp = (label, b) => `<div class="lb-row" style="color:#8a93bf"><span style="color:${C.bright};font-weight:700">${label}</span> n <span style="color:${C.bright};font-weight:700">${(b && b.n) || 0}</span> · finalized ${(b && b.finalized) || 0} · runner ${shp(b && b.runnerShare)} · med peak <span style="color:${sgn(b && b.medianPeak)};font-weight:700">${pct(b && b.medianPeak)}</span> · med r60 <span style="color:${sgn(b && b.medianR60)};font-weight:700">${pct(b && b.medianR60)}</span></div>`;
-  const bs = r.bySource || {}, bb = r.byBand || {};
+  const bs = r.bySource || {}, bb = r.byBand || {}, bq = r.byQualifier || {};
   agg.innerHTML =
-    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY SOURCE</div>` +
+    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY PEAK QUALIFIER</div>` +
+    grp(`retrace setups · peaked ≥ ${mc$(r.minPeakMc || 25000)}`, bq.qualified) + grp('dust · never ran', bq.dust) +
+    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY SOURCE (ALL MARKS)</div>` +
     grp('bot-exited · our own exits', bs['bot-exited']) + grp('watched · never held', bs.watched) +
-    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY MOVE OFF THE LOW</div>` +
+    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY MOVE OFF THE LOW (ALL MARKS)</div>` +
     grp('first move under +25%', bb.lt25) + grp('first move +25% or more', bb.ge25);
   recEl.innerHTML = (r.recent || []).slice(0, 8).map(e => {
     const s = e.score || null;
     const out = (!s || (s.r60 == null && s.peakPct == null)) ? 'tracking…' : `peak <span style="color:${sgn(s.peakPct)};font-weight:700">${pct(s.peakPct)}</span> · r60 <span style="color:${sgn(s.r60)};font-weight:700">${pct(s.r60)}</span>${s.final ? ' · final' : ''}`;
     const flow = e.flowKnown ? `buys back ${shp(e.buyShare)}` : 'flow unknown';
-    return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> <span style="color:#818cf8;font-weight:800">BOTTOM</span> low ${mc$(e.lowMc)} (−${e.drawdownPct == null ? '—' : e.drawdownPct.toFixed(0)}%) → <span style="color:${C.green};font-weight:700">${pc1(e.pctOffLow)}</span> off low · ${flow} · ${e.source === 'bot-exited' ? 'bot-exited' : 'watched'} · ${out}</div>`;
+    const qual = e.qualified ? `<span style="color:${C.green};font-weight:800">RETRACE</span>` : `<span style="color:#5b6284;font-weight:800">DUST</span>`;
+    const rec = e.pctOfPeakRecovered == null ? '' : ` · recovered to <span style="color:${C.bright};font-weight:700">${e.pctOfPeakRecovered.toFixed(1)}%</span> of peak`;
+    return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> <span style="color:#818cf8;font-weight:800">BOTTOM</span> ${qual} low ${mc$(e.lowMc)} (−${e.drawdownPct == null ? '—' : e.drawdownPct.toFixed(0)}% from ${mc$(e.peakMc)} peak) → <span style="color:${C.green};font-weight:700">${pc1(e.pctOffLow)}</span> off low · ${flow} · ${e.source === 'bot-exited' ? 'bot-exited' : 'watched'}${rec} · ${out}</div>`;
   }).join('') || `<div class="lb-row" style="color:#8a93bf">no first-move marks yet — the next dumped coin that bounces off its bottom lands here</div>`;
 }
 /* ---------------- confluence shadow signal: /confluencesignal ----------------
