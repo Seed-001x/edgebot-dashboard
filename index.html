@@ -768,12 +768,12 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div style="color:var(--lfaint);font-size:8px">record-only — first moves are observed, never bought · ready at 30 finalized · promotion is your call</div>
      </div>
      <div class="lb-box" style="border-color:rgba(52,211,153,.35)">
-      <div class="lb-title" style="font-size:9px"><span>RANGE WATCH · shadow</span><small id="lab-rwTag"></small></div>
+      <div class="lb-title" style="font-size:9px"><span>RANGE WATCH · live + study</span><small id="lab-rwTag"></small></div>
       <div style="color:#8a93bf;font-size:9px">a coin that bases in a tight sideways range (hi/lo mc inside the band over the trailing window, no 1-minute lurches) is journaled as a mark — one per range episode — and forward-scored: did the range EXPAND (+50% peak first), BREAK DOWN (−30% dip first), or just keep ranging? The shape to look for right before the pop, instead of chasing the pop's tip.</div>
       <div id="lab-rwRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
       <div id="lab-rwAgg" style="display:flex;flex-direction:column;gap:1px"></div>
       <div id="lab-rwRecent" style="display:flex;flex-direction:column;gap:1px"></div>
-      <div style="color:var(--lfaint);font-size:8px">record-only — ranges are observed, never bought · ready at 30 finalized · promotion is your call</div>
+      <div style="color:var(--lfaint);font-size:8px">the study is record-only; the marks themselves route live entries (RANGE_LIVE) through the standard gates · ready at 30 finalized · promotion is your call</div>
      </div>
      <div class="lb-box" style="border-color:rgba(255,107,107,.35)">
       <div class="lb-title" style="font-size:9px"><span>DEAD-ENTRY VETO · shadow</span><small id="lab-deTag"></small></div>
@@ -1986,7 +1986,10 @@ function renderRange(r) {
   tag.textContent = r.ready ? `READY · ${r.finalized || 0} FINALIZED` : 'COLLECTING';
   rows.innerHTML =
     `<div class="lb-row" style="color:#8a93bf">range marks <span style="color:${C.bright};font-weight:700">${r.marks || 0}</span> · finalized <span style="color:${C.bright};font-weight:700">${r.finalized || 0}</span> · expanded <span style="color:${C.green};font-weight:700">${shp(a.expandedShare)}</span> · broke down <span style="color:${C.red};font-weight:700">${shp(a.brokeDownShare)}</span> · ranged <span style="color:${C.bright};font-weight:700">${shp(a.rangedShare)}</span> · med peak <span style="color:${sgn(a.medianPeak)};font-weight:700">${pct(a.medianPeak)}</span> · med r60 <span style="color:${sgn(a.medianR60)};font-weight:700">${pct(a.medianR60)}</span></div>` +
-    `<div class="lb-row" style="color:#8a93bf">episodes <span style="color:${C.bright};font-weight:700">${r.episodes || 0}</span> · open now <span style="color:${C.bright};font-weight:700">${r.episodesOpen ?? '—'}</span> · tracking <span style="color:${C.bright};font-weight:700">${r.tracking ?? '—'}</span> coins · window ${r.windowMin ?? '—'}m · band ≤ ${r.maxBandPct ?? '—'}% · floor ${mc$(r.minMc || 15000)}</div>`;
+    `<div class="lb-row" style="color:#8a93bf">episodes <span style="color:${C.bright};font-weight:700">${r.episodes || 0}</span> · open now <span style="color:${C.bright};font-weight:700">${r.episodesOpen ?? '—'}</span> · tracking <span style="color:${C.bright};font-weight:700">${r.tracking ?? '—'}</span> coins · window ${r.windowMin ?? '—'}m · band ≤ ${r.maxBandPct ?? '—'}% · floor ${mc$(r.minMc || 15000)}</div>` +
+    (r.liveRouting ? (r.liveRouting.live
+      ? `<div class="lb-row" style="color:#8a93bf">live routing <span style="color:${C.green};font-weight:800">ON</span> · evals <span style="color:${C.bright};font-weight:700">${r.liveRouting.evals || 0}</span> · range signals <span style="color:${C.bright};font-weight:700">${r.liveRouting.signals || 0}</span> · taken <span style="color:${C.bright};font-weight:700">${r.liveRouting.taken || 0}</span>${r.liveRouting.noView ? ` · no-view ${r.liveRouting.noView}` : ''} — marks route real entries through the standard pipeline</div>`
+      : `<div class="lb-row" style="color:#8a93bf">live routing <span style="color:#5b6284;font-weight:800">OFF</span> — marks are study-only (RANGE_LIVE=0)</div>`) : '');
   const grp = (label, b) => `<div class="lb-row" style="color:#8a93bf"><span style="color:${C.bright};font-weight:700">${label}</span> n <span style="color:${C.bright};font-weight:700">${(b && b.n) || 0}</span> · finalized ${(b && b.finalized) || 0} · expanded ${shp(b && b.expandedShare)} · broke ${shp(b && b.brokeDownShare)} · med peak <span style="color:${sgn(b && b.medianPeak)};font-weight:700">${pct(b && b.medianPeak)}</span> · med r60 <span style="color:${sgn(b && b.medianR60)};font-weight:700">${pct(b && b.medianR60)}</span></div>`;
   const bt = r.byTightness || {}, bd = r.byDuration || {}, bs = r.bySource || {};
   agg.innerHTML =
