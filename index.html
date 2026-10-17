@@ -767,6 +767,14 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-bwRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">record-only — first moves are observed, never bought · ready at 30 finalized · promotion is your call</div>
      </div>
+     <div class="lb-box" style="border-color:rgba(52,211,153,.35)">
+      <div class="lb-title" style="font-size:9px"><span>RANGE WATCH · shadow</span><small id="lab-rwTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">a coin that bases in a tight sideways range (hi/lo mc inside the band over the trailing window, no 1-minute lurches) is journaled as a mark — one per range episode — and forward-scored: did the range EXPAND (+50% peak first), BREAK DOWN (−30% dip first), or just keep ranging? The shape to look for right before the pop, instead of chasing the pop's tip.</div>
+      <div id="lab-rwRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
+      <div id="lab-rwAgg" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div id="lab-rwRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px">record-only — ranges are observed, never bought · ready at 30 finalized · promotion is your call</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(255,107,107,.35)">
       <div class="lb-title" style="font-size:9px"><span>DEAD-ENTRY VETO · shadow</span><small id="lab-deTag"></small></div>
       <div style="color:#8a93bf;font-size:9px">every pop signal is stamped with its own 5m volume + buy velocity — would a veto at $15K / $17.5K / $20K / $25K (or under 30 buys/min) have blocked it? Vetoed vs passed, split into time halves. The whole curve is shadowed because the in-sample $17.5K line flipped sign against $15K.</div>
@@ -1427,6 +1435,7 @@ function loadShadowCards() {
   loadCard(staircaseLive, renderStaircase, null, 'stRows');
   loadCard(confluenceSignalLive, renderConfluenceSignal, null, 'csRows');
   loadCard(bottomLive, renderBottom, null, 'bwRows');
+  loadCard(rangeLive, renderRange, null, 'rwRows');
   loadCard(deadEntryLive, renderDeadEntry, null, 'deRows');
 }
 /* ---------------- shadow trades (trade-grade shadow) ----------------
@@ -1950,6 +1959,50 @@ function renderBottom(r) {
     const rec = e.pctOfPeakRecovered == null ? '' : ` · recovered to <span style="color:${C.bright};font-weight:700">${e.pctOfPeakRecovered.toFixed(1)}%</span> of peak`;
     return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> <span style="color:#818cf8;font-weight:800">BOTTOM</span> ${qual} low ${mc$(e.lowMc)} (−${e.drawdownPct == null ? '—' : e.drawdownPct.toFixed(0)}% from ${mc$(e.peakMc)} peak) → <span style="color:${C.green};font-weight:700">${pc1(e.pctOffLow)}</span> off low · ${flow} · ${e.source === 'bot-exited' ? 'bot-exited' : 'watched'}${rec} · ${out}</div>`;
   }).join('') || `<div class="lb-row" style="color:#8a93bf">no first-move marks yet — the next dumped coin that bounces off its bottom lands here</div>`;
+}
+/* ---------------- range study: /rangewatch ----------------
+   Geometry on this endpoint (bandPct) is PERCENT already; forward
+   scores (peakPct, r15, r60) are FRACTIONS like /staircase. Outcome
+   classes ride on the finalized marks' scores: expanded / broke-down /
+   ranged, shares over finalized marks with a known outcome. */
+let rwC = { v: null, ts: 0 };
+async function rangeLive() {
+  if (rwC.v && Date.now() - rwC.ts < 30000) return rwC.v;
+  const v = await get('/rangewatch').catch(() => null);
+  if (v && v.aggregates) rwC = { v, ts: Date.now() };
+  return (v && v.aggregates) ? v : null;
+}
+function renderRange(r) {
+  const tag = el('rwTag'), rows = el('rwRows'), agg = el('rwAgg'), recEl = el('rwRecent');
+  if (!tag || !rows) return;
+  if (!r || r.enabled === false) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; agg.innerHTML = ''; recEl.innerHTML = ''; return; }
+  const pct = x => x == null ? '—' : (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%';
+  const shp = x => x == null ? '—' : (x * 100).toFixed(0) + '%';
+  const pc1 = x => x == null ? '—' : (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(1) + '%';
+  const sgn = x => x == null ? 'var(--lbright)' : x > 0 ? C.green : x < 0 ? C.red : 'var(--lbright)';
+  const mc$ = v => v == null ? '—' : '$' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + 'k' : v.toFixed(0));
+  const edt = ts => new Date(ts).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit' });
+  const a = r.aggregates || {};
+  tag.textContent = r.ready ? `READY · ${r.finalized || 0} FINALIZED` : 'COLLECTING';
+  rows.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf">range marks <span style="color:${C.bright};font-weight:700">${r.marks || 0}</span> · finalized <span style="color:${C.bright};font-weight:700">${r.finalized || 0}</span> · expanded <span style="color:${C.green};font-weight:700">${shp(a.expandedShare)}</span> · broke down <span style="color:${C.red};font-weight:700">${shp(a.brokeDownShare)}</span> · ranged <span style="color:${C.bright};font-weight:700">${shp(a.rangedShare)}</span> · med peak <span style="color:${sgn(a.medianPeak)};font-weight:700">${pct(a.medianPeak)}</span> · med r60 <span style="color:${sgn(a.medianR60)};font-weight:700">${pct(a.medianR60)}</span></div>` +
+    `<div class="lb-row" style="color:#8a93bf">episodes <span style="color:${C.bright};font-weight:700">${r.episodes || 0}</span> · open now <span style="color:${C.bright};font-weight:700">${r.episodesOpen ?? '—'}</span> · tracking <span style="color:${C.bright};font-weight:700">${r.tracking ?? '—'}</span> coins · window ${r.windowMin ?? '—'}m · band ≤ ${r.maxBandPct ?? '—'}% · floor ${mc$(r.minMc || 15000)}</div>`;
+  const grp = (label, b) => `<div class="lb-row" style="color:#8a93bf"><span style="color:${C.bright};font-weight:700">${label}</span> n <span style="color:${C.bright};font-weight:700">${(b && b.n) || 0}</span> · finalized ${(b && b.finalized) || 0} · expanded ${shp(b && b.expandedShare)} · broke ${shp(b && b.brokeDownShare)} · med peak <span style="color:${sgn(b && b.medianPeak)};font-weight:700">${pct(b && b.medianPeak)}</span> · med r60 <span style="color:${sgn(b && b.medianR60)};font-weight:700">${pct(b && b.medianR60)}</span></div>`;
+  const bt = r.byTightness || {}, bd = r.byDuration || {}, bs = r.bySource || {};
+  agg.innerHTML =
+    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY TIGHTNESS (BAND AT MARK)</div>` +
+    grp('tight · band ≤ 20%', bt.le20) + grp('loose · band 20–35%', bt.gt20) +
+    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY BASE DURATION AT MARK</div>` +
+    grp('fresh base · under 30m', bd.lt30) + grp('seasoned base · 30m+', bd.ge30) +
+    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY SOURCE</div>` +
+    grp('bot-held · in a position', bs['bot-held']) + grp('bot-exited · our own exits', bs['bot-exited']) + grp('watched · never held', bs.watched);
+  recEl.innerHTML = (r.recent || []).slice(0, 8).map(e => {
+    const s = e.score || null;
+    const oc = !s || !s.outcome ? '' : s.outcome === 'expanded' ? ` · <span style="color:${C.green};font-weight:800">EXPANDED</span>` : s.outcome === 'broke-down' ? ` · <span style="color:${C.red};font-weight:800">BROKE DOWN</span>` : ` · <span style="color:#8a93bf;font-weight:800">RANGED</span>`;
+    const out = (!s || (s.r60 == null && s.peakPct == null)) ? 'tracking…' : `peak <span style="color:${sgn(s.peakPct)};font-weight:700">${pct(s.peakPct)}</span> · r60 <span style="color:${sgn(s.r60)};font-weight:700">${pct(s.r60)}</span>${s.final ? ' · final' : ''}`;
+    const src = e.source === 'bot-held' ? 'bot-held' : e.source === 'bot-exited' ? 'bot-exited' : 'watched';
+    return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> <span style="color:#34d399;font-weight:800">RANGE</span> ${mc$(e.rangeLo)}–${mc$(e.rangeHi)} (${pc1(e.bandPct)} band) over ${e.durationMin == null ? '—' : e.durationMin.toFixed(0)}m · mark ${mc$(e.markMc)} · ${src}${oc} · ${out}</div>`;
+  }).join('') || `<div class="lb-row" style="color:#8a93bf">no range marks yet — the next coin that bases tight and quiet for a full window lands here</div>`;
 }
 /* ---------------- confluence shadow signal: /confluencesignal ----------------
    PnL values from this endpoint are PERCENT already (+24 = +24%) and SOL —
