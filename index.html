@@ -759,6 +759,14 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-csRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">record-only — detection-time entries, view-quote basis · ready at 50 closes per profile · promotion is your call</div>
      </div>
+     <div class="lb-box" style="border-color:rgba(129,140,248,.35)">
+      <div class="lb-title" style="font-size:9px"><span>BOTTOM TRACKER · shadow</span><small id="lab-bwTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">watched coins that dump 50%+ off their sampled peak open an episode; once the low holds quiet for 3 min, the first +18% move off it (with buy flow back, when flow is known) is journaled as a mark and forward-scored like the structure marks. The twitchy cousin of churn's patient basing — are first bounces entries or dead cats?</div>
+      <div id="lab-bwRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
+      <div id="lab-bwAgg" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div id="lab-bwRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px">record-only — first moves are observed, never bought · ready at 30 finalized · promotion is your call</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(255,107,107,.35)">
       <div class="lb-title" style="font-size:9px"><span>DEAD-ENTRY VETO · shadow</span><small id="lab-deTag"></small></div>
       <div style="color:#8a93bf;font-size:9px">every pop signal is stamped with its own 5m volume + buy velocity — would a veto at $15K / $17.5K / $20K / $25K (or under 30 buys/min) have blocked it? Vetoed vs passed, split into time halves. The whole curve is shadowed because the in-sample $17.5K line flipped sign against $15K.</div>
@@ -1418,6 +1426,7 @@ function loadShadowCards() {
   loadCard(structureLive, renderStructure, null, 'swRows');
   loadCard(staircaseLive, renderStaircase, null, 'stRows');
   loadCard(confluenceSignalLive, renderConfluenceSignal, null, 'csRows');
+  loadCard(bottomLive, renderBottom, null, 'bwRows');
   loadCard(deadEntryLive, renderDeadEntry, null, 'deRows');
 }
 /* ---------------- shadow trades (trade-grade shadow) ----------------
@@ -1897,6 +1906,46 @@ function renderStaircase(r) {
     const out = (!s || (s.r60 == null && s.peakPct == null)) ? 'tracking…' : `peak <span style="color:${sgn(s.peakPct)};font-weight:700">${pct(s.peakPct)}</span> · r60 <span style="color:${sgn(s.r60)};font-weight:700">${pct(s.r60)}</span>${s.final ? ' · final' : ''}`;
     return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> <span style="color:${C.orange};font-weight:800">HL${e.ordinal || '?'}</span> · ${out}</div>`;
   }).join('') || `<div class="lb-row" style="color:#8a93bf">no staircase-3 signals yet — the next 3rd higher low on any watched coin lands here</div>`;
+}
+/* ---------------- bottom tracker: /bottomwatch ----------------
+   MIXED units on this endpoint, read carefully: episode geometry
+   (drawdownPct, pctOffLow) is PERCENT already (60 = -60% / +18%);
+   forward scores (peakPct, r15, r60) are FRACTIONS like /staircase. */
+let bwC = { v: null, ts: 0 };
+async function bottomLive() {
+  if (bwC.v && Date.now() - bwC.ts < 30000) return bwC.v;
+  const v = await get('/bottomwatch').catch(() => null);
+  if (v && v.aggregates) bwC = { v, ts: Date.now() };
+  return (v && v.aggregates) ? v : null;
+}
+function renderBottom(r) {
+  const tag = el('bwTag'), rows = el('bwRows'), agg = el('bwAgg'), recEl = el('bwRecent');
+  if (!tag || !rows) return;
+  if (!r || r.enabled === false) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; agg.innerHTML = ''; recEl.innerHTML = ''; return; }
+  const pct = x => x == null ? '—' : (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%';
+  const shp = x => x == null ? '—' : (x * 100).toFixed(0) + '%';
+  const pc1 = x => x == null ? '—' : (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(1) + '%';
+  const sgn = x => x == null ? 'var(--lbright)' : x > 0 ? C.green : x < 0 ? C.red : 'var(--lbright)';
+  const mc$ = v => v == null ? '—' : '$' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + 'k' : v.toFixed(0));
+  const edt = ts => new Date(ts).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit' });
+  const a = r.aggregates || {};
+  tag.textContent = r.ready ? `READY · ${r.finalized || 0} FINALIZED` : 'COLLECTING';
+  rows.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf">marks <span style="color:${C.bright};font-weight:700">${r.marks || 0}</span> · finalized <span style="color:${C.bright};font-weight:700">${r.finalized || 0}</span> · runner share <span style="color:${C.bright};font-weight:700">${shp(a.runnerShare)}</span> · med peak <span style="color:${sgn(a.medianPeak)};font-weight:700">${pct(a.medianPeak)}</span> · med r60 <span style="color:${sgn(a.medianR60)};font-weight:700">${pct(a.medianR60)}</span></div>` +
+    `<div class="lb-row" style="color:#8a93bf">episodes <span style="color:${C.bright};font-weight:700">${r.episodes || 0}</span> · open now <span style="color:${C.bright};font-weight:700">${r.episodesOpen ?? '—'}</span> · tracking <span style="color:${C.bright};font-weight:700">${r.tracking ?? '—'}</span> coins</div>`;
+  const grp = (label, b) => `<div class="lb-row" style="color:#8a93bf"><span style="color:${C.bright};font-weight:700">${label}</span> n <span style="color:${C.bright};font-weight:700">${(b && b.n) || 0}</span> · finalized ${(b && b.finalized) || 0} · runner ${shp(b && b.runnerShare)} · med peak <span style="color:${sgn(b && b.medianPeak)};font-weight:700">${pct(b && b.medianPeak)}</span> · med r60 <span style="color:${sgn(b && b.medianR60)};font-weight:700">${pct(b && b.medianR60)}</span></div>`;
+  const bs = r.bySource || {}, bb = r.byBand || {};
+  agg.innerHTML =
+    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY SOURCE</div>` +
+    grp('bot-exited · our own exits', bs['bot-exited']) + grp('watched · never held', bs.watched) +
+    `<div class="lb-row" style="color:var(--ldim);letter-spacing:1px;font-size:8px">BY MOVE OFF THE LOW</div>` +
+    grp('first move under +25%', bb.lt25) + grp('first move +25% or more', bb.ge25);
+  recEl.innerHTML = (r.recent || []).slice(0, 8).map(e => {
+    const s = e.score || null;
+    const out = (!s || (s.r60 == null && s.peakPct == null)) ? 'tracking…' : `peak <span style="color:${sgn(s.peakPct)};font-weight:700">${pct(s.peakPct)}</span> · r60 <span style="color:${sgn(s.r60)};font-weight:700">${pct(s.r60)}</span>${s.final ? ' · final' : ''}`;
+    const flow = e.flowKnown ? `buys back ${shp(e.buyShare)}` : 'flow unknown';
+    return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> <span style="color:#818cf8;font-weight:800">BOTTOM</span> low ${mc$(e.lowMc)} (−${e.drawdownPct == null ? '—' : e.drawdownPct.toFixed(0)}%) → <span style="color:${C.green};font-weight:700">${pc1(e.pctOffLow)}</span> off low · ${flow} · ${e.source === 'bot-exited' ? 'bot-exited' : 'watched'} · ${out}</div>`;
+  }).join('') || `<div class="lb-row" style="color:#8a93bf">no first-move marks yet — the next dumped coin that bounces off its bottom lands here</div>`;
 }
 /* ---------------- confluence shadow signal: /confluencesignal ----------------
    PnL values from this endpoint are PERCENT already (+24 = +24%) and SOL —
