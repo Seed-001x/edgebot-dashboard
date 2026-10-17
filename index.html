@@ -759,6 +759,12 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-ngRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">record-only — would-cuts are journaled and paired at close, never sold · ready at 30 paired · promotion is your call</div>
      </div>
+     <div class="lb-box" style="border-color:rgba(69,224,154,.45)">
+      <div class="lb-title" style="font-size:9px"><span>FLOW CONFIRMATION LANE · live</span><small id="lab-fcTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">a flow coin that fires AGAIN inside 3h at $50K+ mc with real liquidity enters direct at 0.025 SOL instead of only enrolling — max 2 entries per coin per window, 10-minute lane re-entry after a lane close. Kill rule: at 15 lane closes with a negative mean PnL the lane disables itself and qualifying fires go back to enrolling.</div>
+      <div id="lab-fcRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
+      <div style="color:var(--lfaint);font-size:8px">live money — fed by the flowConfirm block of /state · blocked tallies are qualifying fires the risk gates turned away (they never count toward the kill sample)</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(94,234,212,.35)">
       <div class="lb-title" style="font-size:9px"><span>CONFLUENCE SIGNAL · shadow</span><small id="lab-csTag"></small></div>
       <div style="color:#8a93bf;font-size:9px">every confluence fire (≥2 survivor entities buying one mint in 5m) as a pair of virtual positions stamped at DETECTION time on a 0.05 SOL shadow stake — SCALP sells 100% at the first +20% net check; LADDER runs the live exit stack. The candle journal measured the peak from blockTime; this measures what a tradable entry would actually have kept.</div>
@@ -1441,6 +1447,7 @@ function loadShadowCards() {
   loadCard(structureLive, renderStructure, null, 'swRows');
   loadCard(staircaseLive, renderStaircase, null, 'stRows');
   loadCard(neverGreenLive, renderNeverGreen, null, 'ngRows');
+  loadCard(flowConfirmLive, renderFlowConfirm, null, 'fcRows');
   loadCard(confluenceSignalLive, renderConfluenceSignal, null, 'csRows');
   loadCard(bottomLive, renderBottom, null, 'bwRows');
   loadCard(rangeLive, renderRange, null, 'rwRows');
@@ -1952,6 +1959,34 @@ function renderNeverGreen(r) {
     }
     return `<div class="lb-row" style="color:#8a93bf">${escL(e.ts ? ago(e.ts) : '')} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> would cut at ${e.ratio != null ? (+e.ratio).toFixed(2) + '×' : '—'} (peak ${e.peakRatio != null ? (+e.peakRatio).toFixed(2) + '×' : '—'}, ${e.heldMin != null ? (+e.heldMin).toFixed(1) + ' min' : '—'}) · worth ${sol(e.valueSol)} SOL · open — pairs at close</div>`;
   }).join('') || `<div class="lb-row" style="color:#8a93bf">no would-cuts yet — the next never-green bleeder lands here</div>`;
+}
+/* ---------------- flow confirmation lane: /state flowConfirm ----------------
+   LIVE lane (not a shadow): the block rides /state, so this reads the
+   shared labState() cache. When the kill rule trips, the tag must read
+   DISABLED with the disablement mean — never just go quiet. */
+async function flowConfirmLive() {
+  const st = await labState().catch(() => null);
+  return (st && st.flowConfirm) ? st.flowConfirm : null;
+}
+function renderFlowConfirm(fc) {
+  const tag = el('fcTag'), rows = el('fcRows');
+  if (!tag || !rows) return;
+  if (!fc) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; return; }
+  const sol = x => x == null ? '—' : (x >= 0 ? '+' : '') + (+x).toFixed(4);
+  const b = fc.blocked || {};
+  if (fc.disabled) {
+    tag.textContent = 'DISABLED · KILL RULE';
+    tag.style.color = C.red;
+    rows.innerHTML =
+      `<div class="lb-row" style="color:${C.red};font-weight:700">lane self-disabled at ${fc.closes || 0} closes · mean at disablement <span>${sol(fc.disabledMeanPnlSol)} SOL</span> — qualifying fires enroll again</div>` +
+      `<div class="lb-row" style="color:#8a93bf">fires <span style="color:${C.bright};font-weight:700">${fc.fires || 0}</span> · qualified <span style="color:${C.bright};font-weight:700">${fc.qualifiedFires || 0}</span> · entries <span style="color:${C.bright};font-weight:700">${fc.entries || 0}</span> · closes <span style="color:${C.bright};font-weight:700">${fc.closes || 0}</span> · mean <span style="color:${(fc.meanPnlSol || 0) >= 0 ? C.green : C.red};font-weight:700">${sol(fc.meanPnlSol)} SOL</span></div>`;
+    return;
+  }
+  tag.style.color = '';
+  tag.textContent = fc.enabled ? 'LANE ON' : 'LANE OFF';
+  rows.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf">fires <span style="color:${C.bright};font-weight:700">${fc.fires || 0}</span> · qualified <span style="color:${C.bright};font-weight:700">${fc.qualifiedFires || 0}</span> · entries <span style="color:${C.bright};font-weight:700">${fc.entries || 0}</span> · closes <span style="color:${C.bright};font-weight:700">${fc.closes || 0}</span> · mean <span style="color:${fc.meanPnlSol == null ? C.bright : fc.meanPnlSol >= 0 ? C.green : C.red};font-weight:700">${sol(fc.meanPnlSol)} SOL</span> · kill check at <span style="color:${C.bright};font-weight:700">${fc.killN || 15}</span> closes</div>` +
+    `<div class="lb-row" style="color:#8a93bf">blocked by gates — slot <span style="color:${C.bright};font-weight:700">${b.slot || 0}</span> · halt <span style="color:${C.bright};font-weight:700">${b.halt || 0}</span> · risk <span style="color:${C.bright};font-weight:700">${b.risk || 0}</span> · size <span style="color:${C.bright};font-weight:700">${(+fc.sizeSol || 0).toFixed(3)} SOL</span> · min mc <span style="color:${C.bright};font-weight:700">$${((fc.minMc || 0) / 1000).toFixed(0)}K</span> · window <span style="color:${C.bright};font-weight:700">${fc.windowH || 3}h</span></div>`;
 }
 /* ---------------- bottom tracker: /bottomwatch ----------------
    MIXED units on this endpoint, read carefully: episode geometry
