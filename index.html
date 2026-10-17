@@ -752,6 +752,13 @@ td{padding:9px 8px 9px 0;border-top:1px solid var(--rule2)} td:last-child,th:las
       <div id="lab-stRecent" style="display:flex;flex-direction:column;gap:1px"></div>
       <div style="color:var(--lfaint);font-size:8px">record-only — a signal in name and tracking only; nothing buys on it · ready at 30 finalized · promotion is your call</div>
      </div>
+     <div class="lb-box" style="border-color:rgba(248,113,113,.35)">
+      <div class="lb-title" style="font-size:9px"><span>NEVER-GREEN CUT · shadow</span><small id="lab-ngTag"></small></div>
+      <div style="color:#8a93bf;font-size:9px">a position that has never peaked above +2%, is 5+ minutes old, and prints a realizable quote at −10% or worse for 2 straight checks would have been cut in full at that quote. Priced off the SEXCOIN replay (never green, bled 36 min to −59%; the cut exits at ~8 min / −18%) — the 5-minute arm is what keeps it off MAKERS-shaped dips that recover and run.</div>
+      <div id="lab-ngRows" style="display:flex;flex-direction:column;gap:1px"><div style="color:var(--lfaint);font-size:9px">loading…</div></div>
+      <div id="lab-ngRecent" style="display:flex;flex-direction:column;gap:1px"></div>
+      <div style="color:var(--lfaint);font-size:8px">record-only — would-cuts are journaled and paired at close, never sold · ready at 30 paired · promotion is your call</div>
+     </div>
      <div class="lb-box" style="border-color:rgba(94,234,212,.35)">
       <div class="lb-title" style="font-size:9px"><span>CONFLUENCE SIGNAL · shadow</span><small id="lab-csTag"></small></div>
       <div style="color:#8a93bf;font-size:9px">every confluence fire (≥2 survivor entities buying one mint in 5m) as a pair of virtual positions stamped at DETECTION time on a 0.05 SOL shadow stake — SCALP sells 100% at the first +20% net check; LADDER runs the live exit stack. The candle journal measured the peak from blockTime; this measures what a tradable entry would actually have kept.</div>
@@ -1433,6 +1440,7 @@ function loadShadowCards() {
   loadCard(flowExitsLive, renderFlowExits, null, 'feRows');
   loadCard(structureLive, renderStructure, null, 'swRows');
   loadCard(staircaseLive, renderStaircase, null, 'stRows');
+  loadCard(neverGreenLive, renderNeverGreen, null, 'ngRows');
   loadCard(confluenceSignalLive, renderConfluenceSignal, null, 'csRows');
   loadCard(bottomLive, renderBottom, null, 'bwRows');
   loadCard(rangeLive, renderRange, null, 'rwRows');
@@ -1915,6 +1923,35 @@ function renderStaircase(r) {
     const out = (!s || (s.r60 == null && s.peakPct == null)) ? 'tracking…' : `peak <span style="color:${sgn(s.peakPct)};font-weight:700">${pct(s.peakPct)}</span> · r60 <span style="color:${sgn(s.r60)};font-weight:700">${pct(s.r60)}</span>${s.final ? ' · final' : ''}`;
     return `<div class="lb-row" style="color:#8a93bf">${e.ts ? edt(e.ts) : ''} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> <span style="color:${C.orange};font-weight:800">HL${e.ordinal || '?'}</span> · ${out}</div>`;
   }).join('') || `<div class="lb-row" style="color:#8a93bf">no staircase-3 signals yet — the next 3rd higher low on any watched coin lands here</div>`;
+}
+/* ---------------- never-green cut shadow: /nevergreen ----------------
+   SOL-denominated endpoint (not fractions): valueSol, shadowNet,
+   holdNet and totalDeltaSol are SOL; ratio/peakRatio are multiples
+   (0.87 = -13% vs entry). Recent pairs fires (still open) and paired
+   records (closed, with the delta the cut would have saved). */
+let ngC = { v: null, ts: 0 };
+async function neverGreenLive() {
+  if (ngC.v && Date.now() - ngC.ts < 30000) return ngC.v;
+  const v = await get('/nevergreen').catch(() => null);
+  if (v && v.fires != null) ngC = { v, ts: Date.now() };
+  return (v && v.fires != null) ? v : null;
+}
+function renderNeverGreen(r) {
+  const tag = el('ngTag'), rows = el('ngRows'), recEl = el('ngRecent');
+  if (!tag || !rows || !recEl) return;
+  if (!r || r.enabled === false) { tag.textContent = 'NOT LIVE YET'; rows.innerHTML = ''; recEl.innerHTML = ''; return; }
+  tag.textContent = r.ready ? `READY · ${r.paired || 0} PAIRED` : 'COLLECTING';
+  const sol = x => x == null ? '—' : (x >= 0 ? '+' : '') + (+x).toFixed(4);
+  const wr = r.paired ? Math.round(100 * (r.wins || 0) / r.paired) : null;
+  rows.innerHTML =
+    `<div class="lb-row" style="color:#8a93bf">would-cuts <span style="color:${C.bright};font-weight:700">${r.fires || 0}</span> · paired <span style="color:${C.bright};font-weight:700">${r.paired || 0}</span> · pending <span style="color:${C.bright};font-weight:700">${r.pending || 0}</span> · cut wins <span style="color:${C.bright};font-weight:700">${r.wins || 0}${wr != null ? ` (${wr}%)` : ''}</span> · delta vs hold <span style="color:${(r.totalDeltaSol || 0) >= 0 ? C.green : C.red};font-weight:700">${sol(r.totalDeltaSol)} SOL</span></div>`;
+  recEl.innerHTML = (r.recent || []).slice(0, 8).map(e => {
+    if (e.kind === 'paired') {
+      const d = e.deltaSol;
+      return `<div class="lb-row" style="color:#8a93bf">${escL(e.ts ? ago(e.ts) : '')} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> cut at ${e.ratioAtFire != null ? (+e.ratioAtFire).toFixed(2) + '×' : '—'} · shadow ${sol(e.shadowNet)} vs hold ${sol(e.holdNet)} · <span style="color:${d >= 0 ? C.green : C.red};font-weight:700">${sol(d)}</span>${e.exitReason ? ` · ${escL(e.exitReason)}` : ''}</div>`;
+    }
+    return `<div class="lb-row" style="color:#8a93bf">${escL(e.ts ? ago(e.ts) : '')} <span style="color:${C.bright};font-weight:700">${escL(e.symbol || '?')}</span> would cut at ${e.ratio != null ? (+e.ratio).toFixed(2) + '×' : '—'} (peak ${e.peakRatio != null ? (+e.peakRatio).toFixed(2) + '×' : '—'}, ${e.heldMin != null ? (+e.heldMin).toFixed(1) + ' min' : '—'}) · worth ${sol(e.valueSol)} SOL · open — pairs at close</div>`;
+  }).join('') || `<div class="lb-row" style="color:#8a93bf">no would-cuts yet — the next never-green bleeder lands here</div>`;
 }
 /* ---------------- bottom tracker: /bottomwatch ----------------
    MIXED units on this endpoint, read carefully: episode geometry
